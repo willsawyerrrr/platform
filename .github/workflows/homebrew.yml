@@ -1,0 +1,42 @@
+name: Homebrew
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to publish (e.g. `v1.2.3`).
+        type: string
+        required: true
+      formula:
+        description: Formula name in the tap; defaults to the calling repo's name.
+        type: string
+        default: ""
+    secrets:
+      TAP_DEPLOY_KEY:
+        required: true
+
+jobs:
+  formula:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: willsawyerrrr/homebrew-tap
+          ssh-key: ${{ secrets.TAP_DEPLOY_KEY }}
+      - name: Point the formula at this release
+        env:
+          TAG: ${{ inputs.tag }}
+          FORMULA: ${{ inputs.formula || github.event.repository.name }}
+        run: |
+          file="Formula/${FORMULA}.rb"
+          [[ -f "$file" ]] || { echo "::error::$file does not exist; add the app first"; exit 1; }
+          url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
+          sha="$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)"
+          sed -i -E \
+            -e "s|^  url .*|  url \"${url}\"|" \
+            -e "s|^  sha256 .*|  sha256 \"${sha}\"|" \
+            "$file"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "feat: Update ${FORMULA} to ${TAG}"
+          git push

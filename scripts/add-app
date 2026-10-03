@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Add an application to the Homebrew tap and wire its release workflow.
+#
+# Usage: add-app <app-repo> "<description>"
+#
+# Writes `Formula/<app>.rb` into the tap checkout (`$TAP_DIR`, default
+# `../../homebrew-tap/main`) and `.github/workflows/release.yml` into the app
+# checkout (`$APP_DIR`, default `../../<app>/main`), based on the app's latest
+# release. Edit the generated `install` and `test` blocks, then commit both.
+set -euo pipefail
+
+name="${1:?usage: add-app <app-repo> \"<description>\"}"
+desc="${2:?usage: add-app <app-repo> \"<description>\"}"
+root="$(cd "$(dirname "$0")/.." && pwd)"
+tap="${TAP_DIR:-$root/../../homebrew-tap/main}"
+app="${APP_DIR:-$root/../../$name/main}"
+repo="willsawyerrrr/$name"
+formula="$tap/Formula/$name.rb"
+
+[[ ! -e "$formula" ]] || { echo "$formula already exists" >&2; exit 1; }
+
+tag="$(gh api "repos/$repo/releases/latest" --jq .tag_name)"
+url="https://github.com/$repo/archive/refs/tags/$tag.tar.gz"
+sha="$(curl -fsSL "$url" | shasum -a 256 | cut -d' ' -f1)"
+class="$(awk -F- '{for (i = 1; i <= NF; i++) printf "%s%s", toupper(substr($i, 1, 1)), substr($i, 2)}' <<< "$name")"
+
+fill() {
+  sed -e "s|@CLASS@|$class|g" -e "s|@DESC@|$desc|g" -e "s|@REPO@|$repo|g" \
+    -e "s|@URL@|$url|g" -e "s|@SHA@|$sha|g" -e "s|@NAME@|$name|g" "$1"
+}
+
+mkdir -p "$tap/Formula" "$app/.github/workflows"
+fill "$root/templates/formula.rb" > "$formula"
+fill "$root/templates/app-release.yml" > "$app/.github/workflows/release.yml"
+echo "Wrote $formula and $app/.github/workflows/release.yml"
