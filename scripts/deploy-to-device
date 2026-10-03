@@ -7,8 +7,9 @@
 # Usage: deploy-to-device --name <app> --repo <worktree> [--project-dir ios]
 #                         [--scheme <scheme>] [--force]
 #
-# `--scheme` defaults to the app name and also names the `.xcodeproj` and `.app`; `--force`
-# always installs; `DEVICE` picks a `devicectl` device identifier.
+# The project, scheme (when the project has only one) and built `.app` are read from the Xcode
+# project; pass `--scheme` to choose among several. `--force` always installs; `DEVICE` picks a
+# `devicectl` device identifier.
 set -euo pipefail
 
 name="" repo="" project_dir="ios" scheme="" force=""
@@ -53,9 +54,33 @@ for d in json.load(sys.stdin)["result"]["devices"]:
 
 cd "$repo/$project_dir"
 [[ ! -f project.yml ]] || xcodegen generate --quiet
-xcodebuild -project "$scheme.xcodeproj" -scheme "$scheme" -configuration Debug \
-  -destination 'generic/platform=iOS' -derivedDataPath build -allowProvisioningUpdates -quiet build
-xcrun devicectl device install app --device "$device" "build/Build/Products/Debug-iphoneos/$scheme.app"
+
+projects=(*.xcodeproj)
+[[ ${#projects[@]} -eq 1 ]] || { echo "Expected exactly one .xcodeproj in $repo/$project_dir" >&2; exit 1; }
+project="${projects[0]}"
+
+if [[ -z "$scheme" ]]; then
+  scheme="$(xcodebuild -project "$project" -list -json | python3 -c '
+import json, sys
+schemes = json.load(sys.stdin)["project"]["schemes"]
+if len(schemes) != 1:
+    sys.exit("Pass --scheme; found: " + ", ".join(schemes))
+print(schemes[0])
+')"
+fi
+
+build=(xcodebuild -project "$project" -scheme "$scheme" -configuration Debug
+  -destination 'generic/platform=iOS' -derivedDataPath build -allowProvisioningUpdates)
+"${build[@]}" -quiet build
+app="$("${build[@]}" -showBuildSettings -json | python3 -c '
+import json, sys
+for t in json.load(sys.stdin):
+    s = t["buildSettings"]
+    if s.get("WRAPPER_EXTENSION") == "app":
+        print(s["TARGET_BUILD_DIR"] + "/" + s["FULL_PRODUCT_NAME"])
+        break
+')"
+xcrun devicectl device install app --device "$device" "$app"
 
 echo "$sha $now" > "$STATE_FILE"
 echo "Installed $sha"
