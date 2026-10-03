@@ -19,4 +19,4 @@ Merge to the app's `main`. The shared `release.yml` workflow tags the next versi
 - `release.yml`: reusable. Input `formula` (omit to skip Homebrew). Secret `TAP_DEPLOY_KEY`.
 - `homebrew.yml`: reusable. Inputs `tag` and `formula` (default: calling repo's name). Secret `TAP_DEPLOY_KEY`.
 
-Apps call them via `uses: willsawyerrrr/platform/.github/workflows/release.yml@main`; this repo's Actions access is set to "Accessible from repositories owned by the user".
+Apps call them via `uses: willsawyerrrr/platform/.github/workflows/release.yml@main`. This repo must stay public for other repos to call its workflows.
