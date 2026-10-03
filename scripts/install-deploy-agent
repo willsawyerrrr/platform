@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs a launchd agent that runs `deploy-to-device` for an app hourly (and at login).
+# Installs a launchd agent that runs `deploy-main-to-device` for an app hourly (and at login).
 # It retries until the phone is reachable. Logs: ~/Library/Logs/<app>-deploy.log.
 #
 # Usage: install-deploy-agent --name <app> --repo <main-worktree> [--project-dir ios]
@@ -16,7 +16,7 @@ done
 
 label="dev.willsawyerrrr.$name-deploy"
 plist="$HOME/Library/LaunchAgents/$label.plist"
-script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy-to-device"
+script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy-main-to-device"
 log="$HOME/Library/Logs/$name-deploy.log"
 
 {
