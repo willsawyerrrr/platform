@@ -1,0 +1,17 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency: release
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: willsawyerrrr/platform/.github/workflows/release.yml@main
+    with:
+      formula: @NAME@
+    secrets: inherit
