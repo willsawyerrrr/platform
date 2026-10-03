@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Builds an iOS app from its up-to-date `main` worktree and installs it on the paired
-# iPhone, without opening Xcode. Skips unless `main` has new commits or the last install is
-# older than `MAX_AGE_DAYS` (a free team's install expires after 7 days).
+# Builds an iOS app from a worktree's current checkout, including uncommitted changes, and
+# installs it on the paired iPhone, without opening Xcode. Skips unless the checkout has
+# changed or the last install is older than `MAX_AGE_DAYS` (a free team's install expires
+# after 7 days).
 #
-# Usage: deploy-to-device --name <app> --repo <main-worktree> [--project-dir ios]
+# Usage: deploy-to-device --name <app> --repo <worktree> [--project-dir ios]
 #                         [--scheme <scheme>] [--force]
 #
 # `--scheme` defaults to the app name and also names the `.xcodeproj` and `.app`; `--force`
@@ -21,7 +22,7 @@ while [[ $# -gt 0 ]]; do
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-[[ -n "$name" && -n "$repo" ]] || { echo "usage: deploy-to-device --name <app> --repo <main-worktree> [--project-dir ios] [--scheme <scheme>] [--force]" >&2; exit 2; }
+[[ -n "$name" && -n "$repo" ]] || { echo "usage: deploy-to-device --name <app> --repo <worktree> [--project-dir ios] [--scheme <scheme>] [--force]" >&2; exit 2; }
 scheme="${scheme:-$name}"
 
 MAX_AGE_DAYS="${MAX_AGE_DAYS:-5}"
@@ -29,8 +30,9 @@ STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/platform/$name"
 STATE_FILE="$STATE_DIR/last-deploy"
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-git -C "$repo" pull --ff-only --quiet
 sha="$(git -C "$repo" rev-parse HEAD)"
+dirty="$(git -C "$repo" diff HEAD | shasum | cut -c1-8)"
+[[ "$dirty" == da39a3ee ]] || sha="$sha-$dirty"
 now="$(date +%s)"
 mkdir -p "$STATE_DIR"
 read -r last_sha last_time < "$STATE_FILE" 2>/dev/null || { last_sha=""; last_time=0; }

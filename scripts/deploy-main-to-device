@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Fast-forwards an app's `main` worktree, then runs `deploy-to-device` on it.
+#
+# Usage: deploy-main-to-device --repo <main-worktree> [<deploy-to-device flags>...]
+set -euo pipefail
+
+repo=""
+for ((i = 1; i <= $#; i++)); do
+  [[ "${!i}" != --repo ]] || { j=$((i + 1)); repo="${!j}"; }
+done
+[[ -n "$repo" ]] || { echo "usage: deploy-main-to-device --repo <main-worktree> [flags...]" >&2; exit 2; }
+
+git -C "$repo" pull --ff-only --quiet
+exec "$(dirname "${BASH_SOURCE[0]}")/deploy-to-device" "$@"
