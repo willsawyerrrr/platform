@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Installs a launchd agent that runs `deploy-to-device` for an app hourly (and at login).
+# It retries until the phone is reachable. Logs: ~/Library/Logs/<app>-deploy.log.
+#
+# Usage: install-deploy-agent --name <app> --repo <main-worktree> [--project-dir ios]
+#                             [--scheme <scheme>]
+set -euo pipefail
+
+args=("$@")
+name=""
+while [[ $# -gt 0 ]]; do
+  [[ "$1" != --name ]] || name="$2"
+  shift
+done
+[[ -n "$name" ]] || { echo "usage: install-deploy-agent --name <app> --repo <main-worktree> [--project-dir ios] [--scheme <scheme>]" >&2; exit 2; }
+
+label="dev.willsawyerrrr.$name-deploy"
+plist="$HOME/Library/LaunchAgents/$label.plist"
+script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy-to-device"
+log="$HOME/Library/Logs/$name-deploy.log"
+
+{
+  cat <<P
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$label</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>$script</string>
+P
+  for a in "${args[@]}"; do echo "    <string>$a</string>"; done
+  cat <<P
+  </array>
+  <key>StartInterval</key><integer>3600</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>$log</string>
+  <key>StandardErrorPath</key><string>$log</string>
+</dict>
+</plist>
+P
+} > "$plist"
+
+launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$plist"
+echo "Installed $label"

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Builds an iOS app from its up-to-date `main` worktree and installs it on the paired
+# iPhone, without opening Xcode. Skips unless `main` has new commits or the last install is
+# older than `MAX_AGE_DAYS` (a free team's install expires after 7 days).
+#
+# Usage: deploy-to-device --name <app> --repo <main-worktree> [--project-dir ios]
+#                         [--scheme <scheme>] [--force]
+#
+# `--scheme` defaults to the app name and also names the `.xcodeproj` and `.app`; `--force`
+# always installs; `DEVICE` picks a `devicectl` device identifier.
+set -euo pipefail
+
+name="" repo="" project_dir="ios" scheme="" force=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --name) name="$2"; shift 2 ;;
+    --repo) repo="$2"; shift 2 ;;
+    --project-dir) project_dir="$2"; shift 2 ;;
+    --scheme) scheme="$2"; shift 2 ;;
+    --force) force=1; shift ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+[[ -n "$name" && -n "$repo" ]] || { echo "usage: deploy-to-device --name <app> --repo <main-worktree> [--project-dir ios] [--scheme <scheme>] [--force]" >&2; exit 2; }
+scheme="${scheme:-$name}"
+
+MAX_AGE_DAYS="${MAX_AGE_DAYS:-5}"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/platform/$name"
+STATE_FILE="$STATE_DIR/last-deploy"
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+git -C "$repo" pull --ff-only --quiet
+sha="$(git -C "$repo" rev-parse HEAD)"
+now="$(date +%s)"
+mkdir -p "$STATE_DIR"
+read -r last_sha last_time < "$STATE_FILE" 2>/dev/null || { last_sha=""; last_time=0; }
+
+if [[ -z "$force" && "$sha" == "$last_sha" && $((now - last_time)) -lt $((MAX_AGE_DAYS * 86400)) ]]; then
+  echo "Up to date ($sha)"
+  exit 0
+fi
+
+device="${DEVICE:-$(xcrun devicectl list devices --json-output /dev/stdout --quiet 2>/dev/null | python3 -c '
+import json, sys
+for d in json.load(sys.stdin)["result"]["devices"]:
+    if d["hardwareProperties"].get("reality") == "physical" and d["hardwareProperties"].get("platform") == "iOS":
+        print(d["identifier"])
+        break
+')}"
+[[ -n "$device" ]] || { echo "No paired iPhone found" >&2; exit 1; }
+
+cd "$repo/$project_dir"
+[[ ! -f project.yml ]] || xcodegen generate --quiet
+xcodebuild -project "$scheme.xcodeproj" -scheme "$scheme" -configuration Debug \
+  -destination 'generic/platform=iOS' -derivedDataPath build -allowProvisioningUpdates -quiet build
+xcrun devicectl device install app --device "$device" "build/Build/Products/Debug-iphoneos/$scheme.app"
+
+echo "$sha $now" > "$STATE_FILE"
+echo "Installed $sha"
