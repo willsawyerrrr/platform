@@ -59,6 +59,8 @@ jobs:
           SCHEME: ${{ inputs.scheme }}
         run: |
           projects=(*.xcodeproj)
+          settings=()
+          [[ -z "${DEVELOPMENT_TEAM:-}" ]] || settings+=(DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM")
           [[ ${#projects[@]} -eq 1 ]] || { echo "Expected exactly one .xcodeproj" >&2; exit 1; }
           xcodebuild archive \
             -project "${projects[0]}" \
@@ -73,13 +75,16 @@ jobs:
             -skipPackagePluginValidation \
             -skipMacroValidation \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            "${settings[@]}" \
             -quiet
       - name: Upload to TestFlight
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          cat > "$RUNNER_TEMP/export.plist" <<'P'
+          team_key=""
+          [[ -z "${DEVELOPMENT_TEAM:-}" ]] || team_key="<key>teamID</key><string>$DEVELOPMENT_TEAM</string>"
+          cat > "$RUNNER_TEMP/export.plist" <<P
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -87,6 +92,7 @@ jobs:
             <key>method</key><string>app-store-connect</string>
             <key>destination</key><string>upload</string>
             <key>signingStyle</key><string>automatic</string>
+            $team_key
           </dict>
           </plist>
           P
