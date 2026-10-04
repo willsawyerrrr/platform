@@ -1,0 +1,102 @@
+name: iOS TestFlight
+
+on:
+  workflow_call:
+    inputs:
+      project-dir:
+        description: Directory containing the XcodeGen `project.yml` or the `.xcodeproj`.
+        type: string
+        default: ios
+      scheme:
+        description: Scheme to archive.
+        type: string
+        required: true
+      env:
+        description: Newline-separated `KEY=value` pairs exported before generating the project.
+        type: string
+        default: ""
+    secrets:
+      ASC_KEY_ID:
+        required: true
+      ASC_ISSUER_ID:
+        required: true
+      ASC_KEY_P8:
+        description: Contents of the App Store Connect API key (`.p8`).
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  testflight:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: ${{ inputs.project-dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Export build environment
+        env:
+          BUILD_ENV: ${{ inputs.env }}
+        run: '[[ -z "$BUILD_ENV" ]] || echo "$BUILD_ENV" >> "$GITHUB_ENV"'
+      - name: Generate the Xcode project
+        run: |
+          if [[ -f project.yml ]]; then
+            brew install xcodegen
+            xcodegen generate
+          fi
+      - name: Write the App Store Connect API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/key.p8"
+      - name: Archive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          SCHEME: ${{ inputs.scheme }}
+        run: |
+          projects=(*.xcodeproj)
+          [[ ${#projects[@]} -eq 1 ]] || { echo "Expected exactly one .xcodeproj" >&2; exit 1; }
+          xcodebuild archive \
+            -project "${projects[0]}" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/app.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/key.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            -quiet
+      - name: Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/export.plist" <<'P'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict>
+          </plist>
+          P
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/app.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/key.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+      - name: Remove the API key
+        if: always()
+        run: rm -r "$RUNNER_TEMP/asc"

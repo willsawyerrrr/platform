@@ -1,0 +1,16 @@
+name: Deploy iOS
+
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**']
+  workflow_dispatch:
+
+concurrency: deploy-ios
+
+jobs:
+  testflight:
+    uses: willsawyerrrr/platform/.github/workflows/ios-testflight.yml@main
+    with:
+      scheme: @NAME@
+    secrets: inherit
