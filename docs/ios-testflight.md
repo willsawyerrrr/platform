@@ -9,12 +9,19 @@ Copy `templates/app-ios-testflight.yml` to `.github/workflows/deploy-ios.yml`, r
 - `ASC_KEY_ID`, `ASC_ISSUER_ID`: from App Store Connect → Users and Access → Integrations. The key needs the App Manager role.
 - `ASC_KEY_P8`: the contents of the downloaded `.p8`.
 
-The app record must exist in App Store Connect and `DEVELOPMENT_TEAM` must be set in the project.
+The app record must exist in App Store Connect and the signing team must be set, either as `DEVELOPMENT_TEAM` in the project or via the `env` input (see below).
 
 ## Inputs
 
 - `scheme` (required): scheme to archive.
 - `project-dir` (default `ios`): holds `project.yml` (generated with `xcodegen`) or the single `.xcodeproj`.
 - `env`: newline-separated `KEY=value` pairs exported before project generation, e.g. variables substituted by `xcodegen`.
+  - `DEVELOPMENT_TEAM`: when non-empty, passed to `xcodebuild archive` as a build setting and to the export options as `teamID`, keeping the team ID out of the repo. Omit it when the project sets the team.
+
+```yaml
+with:
+  env: |
+    DEVELOPMENT_TEAM=${{ vars.DEVELOPMENT_TEAM }}
+```
 
 The build number is the run number, so every upload is unique. The marketing version comes from the project.
