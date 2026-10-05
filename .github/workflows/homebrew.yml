@@ -8,7 +8,15 @@ on:
         type: string
         required: true
       formula:
-        description: Formula name in the tap; defaults to the calling repo's name.
+        description: Formula name in the tap; defaults to the calling repo's name unless `cask` is set.
+        type: string
+        default: ""
+      cask:
+        description: Cask token in the tap; mutually exclusive with `formula`.
+        type: string
+        default: ""
+      asset:
+        description: Path of the release asset a cask installs; only its basename is used. Required with `cask`.
         type: string
         default: ""
     secrets:
@@ -17,6 +25,7 @@ on:
 
 jobs:
   formula:
+    if: inputs.cask == ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,4 +48,38 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "feat: Update ${FORMULA} to ${TAG}"
+          git push
+
+  cask:
+    if: inputs.cask != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the inputs
+        env:
+          FORMULA: ${{ inputs.formula }}
+          ASSET: ${{ inputs.asset }}
+        run: |
+          [[ -z "$FORMULA" ]] || { echo "::error::Set only one of formula and cask"; exit 1; }
+          [[ -n "$ASSET" ]] || { echo "::error::cask requires asset"; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          repository: willsawyerrrr/homebrew-tap
+          ssh-key: ${{ secrets.TAP_DEPLOY_KEY }}
+      - name: Point the cask at this release
+        env:
+          TAG: ${{ inputs.tag }}
+          CASK: ${{ inputs.cask }}
+          ASSET: ${{ inputs.asset }}
+        run: |
+          file="Casks/${CASK}.rb"
+          [[ -f "$file" ]] || { echo "::error::$file does not exist; add the app first"; exit 1; }
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/$(basename "$ASSET")"
+          sha="$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)"
+          sed -i -E \
+            -e "s|^  version .*|  version \"${TAG#v}\"|" \
+            -e "s|^  sha256 .*|  sha256 \"${sha}\"|" \
+            "$file"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "feat: Update ${CASK} to ${TAG}"
           git push
