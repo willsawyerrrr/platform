@@ -14,6 +14,8 @@ while [[ $# -gt 0 ]]; do
 done
 [[ -n "$name" ]] || { echo "usage: install-deploy-agent --name <app> --repo <main-worktree> [--project-dir ios] [--scheme <scheme>]" >&2; exit 2; }
 
+xml() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+
 label="dev.willsawyerrrr.$name-deploy"
 plist="$HOME/Library/LaunchAgents/$label.plist"
 script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy-main-to-device"
@@ -25,19 +27,19 @@ log="$HOME/Library/Logs/$name-deploy.log"
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>$label</string>
+  <key>Label</key><string>$(xml "$label")</string>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>$script</string>
+    <string>$(xml "$script")</string>
 P
-  for a in "${args[@]}"; do echo "    <string>$a</string>"; done
+  for a in "${args[@]}"; do echo "    <string>$(xml "$a")</string>"; done
   cat <<P
   </array>
   <key>StartInterval</key><integer>3600</integer>
   <key>RunAtLoad</key><true/>
-  <key>StandardOutPath</key><string>$log</string>
-  <key>StandardErrorPath</key><string>$log</string>
+  <key>StandardOutPath</key><string>$(xml "$log")</string>
+  <key>StandardErrorPath</key><string>$(xml "$log")</string>
 </dict>
 </plist>
 P
