@@ -64,7 +64,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
-        run: gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+          DRAFT: ${{ inputs.cask != '' && '--draft' || '' }}
+        run: gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes $DRAFT
 
   asset:
     if: inputs.cask != ''
@@ -73,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release.outputs.tag }}
+          ref: ${{ github.sha }}
       - name: Build the asset
         env:
           TAG: ${{ needs.release.outputs.tag }}
@@ -87,6 +88,11 @@ jobs:
           TAG: ${{ needs.release.outputs.tag }}
           ASSET: ${{ inputs.asset }}
         run: gh release upload "$TAG" "$ASSET"
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: gh release edit "$TAG" --draft=false
 
   homebrew:
     if: always() && needs.release.result == 'success' && needs.asset.result != 'failure' && needs.asset.result != 'cancelled' && (inputs.formula != '' || inputs.cask != '')

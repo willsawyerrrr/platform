@@ -23,7 +23,7 @@ Merge to the app's `main`. The shared `release.yml` workflow tags the next versi
 
 An app can ship as a cask from a prebuilt macOS zip. Set `cask` (the token in `Casks/<cask>.rb`), `build-command` and `asset` in `release.yml`.
 
-- After the release is created, a macOS job checks out the tag, runs `build-command` at the repo root with `VERSION` set to the tag without `v`, and uploads `asset` to the release under its basename.
+- The release is created as a draft. A macOS job checks out the released commit, runs `build-command` at the repo root with `VERSION` set to the tag without `v`, and uploads `asset` to the draft under its basename, then publishes the release, which creates the tag.
 - `build-command` must produce `asset`, e.g. with `ditto -c -k --keepParent`.
 - `homebrew.yml` sets `version` and `sha256` in `Casks/<cask>.rb` (the asset's checksum) and commits `feat: Update <cask> to <tag>`. The cask's `url` must use `#{version}`.
 
