@@ -36,6 +36,7 @@ jobs:
         env:
           TAG: ${{ inputs.tag }}
           FORMULA: ${{ inputs.formula || github.event.repository.name }}
+        shell: bash
         run: |
           file="Formula/${FORMULA}.rb"
           [[ -f "$file" ]] || { echo "::error::$file does not exist; add the app first"; exit 1; }
@@ -70,6 +71,7 @@ jobs:
           TAG: ${{ inputs.tag }}
           CASK: ${{ inputs.cask }}
           ASSET: ${{ inputs.asset }}
+        shell: bash
         run: |
           file="Casks/${CASK}.rb"
           [[ -f "$file" ]] || { echo "::error::$file does not exist; add the app first"; exit 1; }
