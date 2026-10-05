@@ -4,7 +4,19 @@ on:
   workflow_call:
     inputs:
       formula:
-        description: Formula name in the tap; omit to skip publishing to Homebrew.
+        description: Formula name in the tap; omit to skip publishing a formula. Mutually exclusive with `cask`.
+        type: string
+        default: ""
+      cask:
+        description: Cask token in the tap; omit to skip publishing a cask. Mutually exclusive with `formula`.
+        type: string
+        default: ""
+      build-command:
+        description: Shell command run on macOS at the repo root with `VERSION` set (the tag without `v`); must produce `asset`. Required with `cask`.
+        type: string
+        default: ""
+      asset:
+        description: Path of the zip that `build-command` produces, uploaded to the release under its basename. Required with `cask`.
         type: string
         default: ""
     secrets:
@@ -20,6 +32,19 @@ jobs:
     outputs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
+      - name: Check the Homebrew inputs
+        env:
+          FORMULA: ${{ inputs.formula }}
+          CASK: ${{ inputs.cask }}
+          BUILD_COMMAND: ${{ inputs.build-command }}
+          ASSET: ${{ inputs.asset }}
+        run: |
+          if [[ -n "$FORMULA" && -n "$CASK" ]]; then
+            echo "::error::Set only one of formula and cask"; exit 1
+          fi
+          if [[ -n "$CASK" && ( -z "$BUILD_COMMAND" || -z "$ASSET" ) ]]; then
+            echo "::error::cask requires build-command and asset"; exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -41,11 +66,35 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         run: gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
 
-  homebrew:
-    if: inputs.formula != ''
+  asset:
+    if: inputs.cask != ''
     needs: release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Build the asset
+        env:
+          TAG: ${{ needs.release.outputs.tag }}
+          BUILD_COMMAND: ${{ inputs.build-command }}
+        run: |
+          export VERSION="${TAG#v}"
+          bash -euo pipefail -c "$BUILD_COMMAND"
+      - name: Upload the asset to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.tag }}
+          ASSET: ${{ inputs.asset }}
+        run: gh release upload "$TAG" "$ASSET"
+
+  homebrew:
+    if: always() && needs.release.result == 'success' && needs.asset.result != 'failure' && needs.asset.result != 'cancelled' && (inputs.formula != '' || inputs.cask != '')
+    needs: [release, asset]
     uses: willsawyerrrr/platform/.github/workflows/homebrew.yml@main
     with:
       tag: ${{ needs.release.outputs.tag }}
       formula: ${{ inputs.formula }}
+      cask: ${{ inputs.cask }}
+      asset: ${{ inputs.asset }}
     secrets: inherit

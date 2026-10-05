@@ -16,7 +16,15 @@ Merge to the app's `main`. The shared `release.yml` workflow tags the next versi
 
 ## Workflows
 
-- `release.yml`: reusable. Input `formula` (omit to skip Homebrew). Secret `TAP_DEPLOY_KEY`.
-- `homebrew.yml`: reusable. Inputs `tag` and `formula` (default: calling repo's name). Secret `TAP_DEPLOY_KEY`.
+- `release.yml`: reusable. Inputs: `formula` or `cask` (mutually exclusive; omit both to skip Homebrew), and, with `cask`, `build-command` and `asset`. Secret `TAP_DEPLOY_KEY`.
+- `homebrew.yml`: reusable. Inputs: `tag`; `formula` (default: calling repo's name) or `cask`; `asset` (with `cask`). Secret `TAP_DEPLOY_KEY`.
+
+## Casks
+
+An app can ship as a cask from a prebuilt macOS zip. Set `cask` (the token in `Casks/<cask>.rb`), `build-command` and `asset` in `release.yml`.
+
+- After the release is created, a macOS job checks out the tag, runs `build-command` at the repo root with `VERSION` set to the tag without `v`, and uploads `asset` to the release under its basename.
+- `build-command` must produce `asset`, e.g. with `ditto -c -k --keepParent`.
+- `homebrew.yml` sets `version` and `sha256` in `Casks/<cask>.rb` (the asset's checksum) and commits `feat: Update <cask> to <tag>`. The cask's `url` must use `#{version}`.
 
 Apps call them via `uses: willsawyerrrr/platform/.github/workflows/release.yml@main`. This repo must stay public for other repos to call its workflows.
