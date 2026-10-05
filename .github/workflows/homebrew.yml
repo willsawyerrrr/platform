@@ -23,6 +23,9 @@ on:
       TAP_DEPLOY_KEY:
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   formula:
     if: inputs.cask == ''
