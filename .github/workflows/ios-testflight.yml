@@ -76,11 +76,18 @@ jobs:
             -quiet
       - name: Upload to TestFlight
         env:
+          SCHEME: ${{ inputs.scheme }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          team_key=""
-          [[ -z "${DEVELOPMENT_TEAM:-}" ]] || team_key="<key>teamID</key><string>$DEVELOPMENT_TEAM</string>"
+          team="${DEVELOPMENT_TEAM:-}"
+          if [[ -z "$team" ]]; then
+            projects=(*.xcodeproj)
+            team=$(xcodebuild -showBuildSettings -project "${projects[0]}" -scheme "$SCHEME" -configuration Release |
+              awk '$1 == "DEVELOPMENT_TEAM" { print $3; exit }')
+          fi
+          [[ -n "$team" ]] || { echo "No development team: set DEVELOPMENT_TEAM in the project or the env input" >&2; exit 1; }
+          team_key="<key>teamID</key><string>$team</string>"
           cat > "$RUNNER_TEMP/export.plist" <<P
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

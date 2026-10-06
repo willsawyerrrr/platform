@@ -18,7 +18,7 @@ The app record must exist in App Store Connect and the signing team must be set,
 - `scheme` (required): scheme to archive.
 - `project-dir` (default `ios`): holds `project.yml` (generated with `xcodegen`) or the single `.xcodeproj`.
 - `env`: newline-separated `KEY=value` pairs exported before project generation, e.g. variables substituted by `xcodegen`.
-  - `DEVELOPMENT_TEAM`: when non-empty, passed to `xcodebuild archive` as a build setting and to the export options as `teamID`, keeping the team ID out of the repo. Omit it when the project sets the team.
+  - `DEVELOPMENT_TEAM`: when non-empty, passed to `xcodebuild archive` as a build setting and to the export options as `teamID`, keeping the team ID out of the repo. Omit it when the project sets the team: the unsigned archive records no team, so the export reads it from the project's `DEVELOPMENT_TEAM` build setting.
 
 ```yaml
 with:
