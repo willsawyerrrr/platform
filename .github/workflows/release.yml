@@ -60,7 +60,7 @@ jobs:
           if [[ -n "$CASK" && ( -z "$BUILD_COMMAND" || -z "$ASSET" ) ]]; then
             echo "::error::cask requires build-command and asset"; exit 1
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Pick the next version
@@ -87,7 +87,7 @@ jobs:
     needs: release
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
       - name: Import the signing certificate

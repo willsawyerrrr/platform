@@ -35,7 +35,7 @@ jobs:
       run:
         working-directory: ${{ inputs.project-dir }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Export build environment
         env:
           BUILD_ENV: ${{ inputs.env }}
