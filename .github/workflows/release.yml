@@ -79,8 +79,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
-          DRAFT: ${{ inputs.cask != '' && '--draft' || '' }}
-        run: gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes $DRAFT
+          CASK: ${{ inputs.cask }}
+        run: |
+          flags=()
+          [[ -z "$CASK" ]] || flags+=(--draft)
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes "${flags[@]}"
 
   asset:
     if: inputs.cask != ''
@@ -103,7 +106,9 @@ jobs:
           security create-keychain -p "$password" "$keychain"
           security set-keychain-settings -lut 21600 "$keychain"
           security unlock-keychain -p "$password" "$keychain"
-          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          keychains=()
+          while IFS= read -r existing; do keychains+=("$existing"); done < <(security list-keychains -d user | sed -e 's/^[[:space:]]*"//' -e 's/"$//')
+          security list-keychains -d user -s "$keychain" "${keychains[@]}"
           security default-keychain -s "$keychain"
           base64 --decode <<< "$DEVELOPER_ID_P12" > "$RUNNER_TEMP/developer-id.p12"
           security import "$RUNNER_TEMP/developer-id.p12" -k "$keychain" -P "$DEVELOPER_ID_P12_PASSWORD" -T /usr/bin/codesign
