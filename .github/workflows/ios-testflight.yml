@@ -54,8 +54,6 @@ jobs:
           printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/key.p8"
       - name: Archive
         env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           SCHEME: ${{ inputs.scheme }}
         run: |
           projects=(*.xcodeproj)
@@ -68,12 +66,11 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/app.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/asc/key.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             -skipPackagePluginValidation \
             -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
             "${settings[@]}" \
             -quiet
