@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Generate an app logo with the Recraft image-generation API.
+#
+# Usage: generate-logo [--svg] [--out <dir>] <app-name> "<description>"
+#
+# Writes `<dir>/<app-name>.png` (1024x1024, default `.`), or `<app-name>.svg`
+# with `--svg`. Reads `RECRAFT_API_KEY` from the environment or `$ENV_FILE`
+# (default `~/willsawyerrrr.dev/.env`).
+set -euo pipefail
+
+usage() { echo "usage: generate-logo [--svg] [--out <dir>] <app-name> \"<description>\"" >&2; exit 1; }
+
+model=recraftv4 ext=png out=.
+while [[ "${1:-}" == --* ]]; do
+  case "$1" in
+    --svg) model=recraftv4_vector ext=svg; shift ;;
+    --out) out="${2:?}"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+name="${1:-}" desc="${2:-}"
+[[ -n "$name" && -n "$desc" ]] || usage
+
+if [[ -z "${RECRAFT_API_KEY:-}" ]]; then
+  RECRAFT_API_KEY="$(sed -n 's/^RECRAFT_API_KEY=//p' "${ENV_FILE:-$HOME/willsawyerrrr.dev/.env}")"
+fi
+[[ -n "$RECRAFT_API_KEY" ]] || { echo "RECRAFT_API_KEY is not set" >&2; exit 1; }
+
+prompt="App icon logo for \"$name\": $desc. Single bold centred mark, flat colours, simple shapes, no text, full-bleed square background."
+body="$(jq -n --arg p "$prompt" --arg m "$model" '{prompt: $p, model: $m, size: "1024x1024"}')"
+url="$(curl -fsS https://external.api.recraft.ai/v1/images/generations \
+  -H "Authorization: Bearer $RECRAFT_API_KEY" -H "Content-Type: application/json" \
+  -d "$body" | jq -er '.data[0].url')"
+
+mkdir -p "$out"
+curl -fsS "$url" -o "$out/$name.$ext"
+echo "Wrote $out/$name.$ext"

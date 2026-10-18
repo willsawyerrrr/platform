@@ -5,6 +5,7 @@ Engineering platform shared by all willsawyerrrr.dev projects.
 - [Homebrew tap](docs/homebrew-tap.md): add apps to the tap and release new versions.
 - [iOS device deploy](docs/ios-device-deploy.md): keep an app installed on the paired iPhone.
 - [iOS TestFlight deploy](docs/ios-testflight.md): ship an app to TestFlight from GitHub Actions.
+- [Generate app logos](docs/generate-logo.md): create a logo with Recraft.
 
 ## Reusable workflows
 
@@ -20,6 +21,7 @@ Called from apps as `willsawyerrrr/platform/.github/workflows/<name>@main`.
 - `scripts/deploy-to-device`: build and install an iOS app on the paired iPhone.
 - `scripts/deploy-main-to-device`: fast-forward an app's `main`, then deploy it.
 - `scripts/install-deploy-agent`: schedule `deploy-main-to-device` with launchd.
+- `scripts/generate-logo`: generate an app logo with Recraft.
 
 ## Templates
 

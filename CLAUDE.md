@@ -4,4 +4,5 @@ Shared reusable workflows, scripts and templates for willsawyerrrr.dev projects.
 
 - Changes to a reusable workflow affect every app that calls it at `@main`; keep inputs backwards compatible.
 - Keep `docs/` in sync with workflows, scripts and templates.
+- `.claude/skills/` holds Claude skills that wrap the scripts.
 - `templates/` use `@NAME@`-style placeholders and are not valid workflows or formulae until filled.
