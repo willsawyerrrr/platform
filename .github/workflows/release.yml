@@ -88,7 +88,9 @@ jobs:
   asset:
     if: inputs.cask != ''
     needs: release
-    runs-on: macos-latest
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app
     steps:
       - uses: actions/checkout@v7
         with:
