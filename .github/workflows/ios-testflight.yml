@@ -74,6 +74,26 @@ jobs:
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
             "${settings[@]}" \
             -quiet
+      - name: Embed entitlements
+        run: |
+          projects=(*.xcodeproj)
+          archive="$RUNNER_TEMP/app.xcarchive"
+          settings="$(xcodebuild -showBuildSettings -project "${projects[0]}" -alltargets -configuration Release -json)"
+          jq -c '.[].buildSettings | select(.CODE_SIGN_ENTITLEMENTS // "" != "")' <<< "$settings" | while read -r target; do
+            id="$(jq -r .PRODUCT_BUNDLE_IDENTIFIER <<< "$target")"
+            src="$(jq -r '.SRCROOT + "/" + .CODE_SIGN_ENTITLEMENTS' <<< "$target")"
+            team="$(jq -r '.DEVELOPMENT_TEAM // ""' <<< "$target")"
+            [[ -f "$src" ]] || continue
+            expanded="$RUNNER_TEMP/$id.entitlements"
+            sed -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/$id/g" \
+              -e "s/\$(AppIdentifierPrefix)/$team./g" -e "s/\$(TeamIdentifierPrefix)/$team./g" "$src" > "$expanded"
+            find "$archive/Products/Applications" \( -name '*.app' -o -name '*.appex' \) -print0 |
+              while IFS= read -r -d '' bundle; do
+                if [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$bundle/Info.plist")" == "$id" ]]; then
+                  codesign --force --sign - --entitlements "$expanded" "$bundle"
+                fi
+              done
+          done
       - name: Upload to TestFlight
         env:
           SCHEME: ${{ inputs.scheme }}

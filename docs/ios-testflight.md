@@ -2,7 +2,7 @@
 
 Reusable workflow `.github/workflows/ios-testflight.yml` archives an app on a `macos-latest` runner and uploads it to TestFlight, signing with the paid team's cloud-managed certificates via an App Store Connect API key.
 
-The archive is unsigned (`CODE_SIGNING_ALLOWED=NO`) and uses no API key. Only `xcodebuild -exportArchive` signs, with `signingStyle: automatic` and `-allowProvisioningUpdates`, so the runner uses the team's one cloud-managed Apple Distribution certificate and an App Store profile. A signed archive under automatic signing needs an Apple Development certificate, which every ephemeral runner would mint anew until the team reached Apple's certificate limit and the archive failed with `Choose a certificate to revoke`.
+The archive is unsigned (`CODE_SIGNING_ALLOWED=NO`) and uses no API key. The `Embed entitlements` step then ad-hoc signs each bundle in the archive with its target's `CODE_SIGN_ENTITLEMENTS` file, expanding `$(PRODUCT_BUNDLE_IDENTIFIER)`, `$(AppIdentifierPrefix)` and `$(TeamIdentifierPrefix)`, because an unsigned archive carries no entitlements and export signing keeps only those already embedded. Only `xcodebuild -exportArchive` signs with the team's certificate, with `signingStyle: automatic` and `-allowProvisioningUpdates`, so the runner uses the team's one cloud-managed Apple Distribution certificate and an App Store profile. A signed archive under automatic signing needs an Apple Development certificate, which every ephemeral runner would mint anew until the team reached Apple's certificate limit and the archive failed with `Choose a certificate to revoke`.
 
 ## Set up an app
 
