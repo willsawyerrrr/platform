@@ -2,13 +2,21 @@
 
 Apps are published to [`willsawyerrrr/homebrew-tap`](https://github.com/willsawyerrrr/homebrew-tap).
 
-## Add an app
+## Add an app (formula)
 
 1. Cut the app's first release (`gh release create v0.1.0 --generate-notes`).
 2. `scripts/add-app <app-repo> "<description>"` scaffolds `Formula/<app>.rb` in the tap and `.github/workflows/release.yml` in the app.
 3. Fill in the formula's `install` and `test` blocks; run `brew install --build-from-source` and `brew audit --strict` against it.
 4. Give the app repo the tap's deploy key: `gh secret set TAP_DEPLOY_KEY --repo willsawyerrrr/<app> < <key>`.
 5. Commit and push the formula (tap) and workflow (app).
+
+### Add a cask app
+
+1. `scripts/add-app --cask <app-repo> "<description>"` scaffolds `Casks/<app>.rb` in the tap (and a row in the tap's README table) and a cask `.github/workflows/release.yml` in the app. The bundle is `<App>.app` in `<App>.zip`, where `<App>` is the repo name in PascalCase; override with `APP_BUNDLE`.
+2. Replace the workflow's `build-command` with the app's packaging command (it must produce `<App>.zip` at the repo root) and adjust the cask's `zap` stanza and `depends_on macos:`. Add `binary` stanzas if the app ships a CLI.
+3. No release is needed first: the cask starts at the latest release if it has the zip, else at `0.0.0` with a zero checksum that the first release replaces.
+4. Give the app repo the tap's deploy key, as above, and any signing secrets (see Casks).
+5. Run `brew style --fix` and `brew audit --cask --online <app>` in the tap, then commit and push the cask (tap) and workflow (app). The online audit needs the first release's zip, so it only passes once that release exists; the tap's CI runs the same checks.
 
 ## Release a new version
 
