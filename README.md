@@ -17,7 +17,7 @@ Called from apps as `willsawyerrrr/platform/.github/workflows/<name>@main`.
 
 ## Scripts
 
-- `scripts/add-app`: add an app to the Homebrew tap and wire its release workflow.
+- `scripts/add-app`: add an app to the Homebrew tap as a formula, or as a cask with `--cask`, and wire its release workflow.
 - `scripts/deploy-to-device`: build and install an iOS app on the paired iPhone.
 - `scripts/deploy-main-to-device`: fast-forward an app's `main`, then deploy it.
 - `scripts/install-deploy-agent`: schedule `deploy-main-to-device` with launchd.
@@ -25,4 +25,4 @@ Called from apps as `willsawyerrrr/platform/.github/workflows/<name>@main`.
 
 ## Templates
 
-`templates/` holds the files `scripts/add-app` and the docs copy into apps and the tap. Placeholders such as `@NAME@` are substituted when used.
+`templates/` holds the formula, cask and workflow files `scripts/add-app` and the docs copy into apps and the tap. Placeholders such as `@NAME@` are substituted when used.

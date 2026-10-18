@@ -1,35 +1,65 @@
 #!/usr/bin/env bash
 # Add an application to the Homebrew tap and wire its release workflow.
 #
-# Usage: add-app <app-repo> "<description>"
+# Usage: add-app [--cask] <app-repo> "<description>"
 #
-# Writes `Formula/<app>.rb` into the tap checkout (`$TAP_DIR`, default
-# `../../homebrew-tap/main`) and `.github/workflows/release.yml` into the app
-# checkout (`$APP_DIR`, default `../../<app>/main`), based on the app's latest
+# Without `--cask`, writes `Formula/<app>.rb` into the tap checkout (`$TAP_DIR`,
+# default `../../homebrew-tap/main`) and `.github/workflows/release.yml` into the
+# app checkout (`$APP_DIR`, default `../../<app>/main`), based on the app's latest
 # release. Edit the generated `install` and `test` blocks, then commit both.
+#
+# With `--cask`, writes `Casks/<app>.rb` and a release workflow that builds
+# `<App>.zip` (`$APP_BUNDLE`, default the app repo name in PascalCase), and adds
+# the cask to the tap's README table. The cask starts at the latest release if
+# it has the zip, else at `0.0.0` with a zero checksum that the first release
+# replaces. Edit the workflow's `build-command` and the cask's `zap` stanza.
 set -euo pipefail
 
-name="${1:?usage: add-app <app-repo> \"<description>\"}"
-desc="${2:?usage: add-app <app-repo> \"<description>\"}"
+usage="usage: add-app [--cask] <app-repo> \"<description>\""
+cask=false
+if [[ "${1:-}" == --cask ]]; then cask=true; shift; fi
+name="${1:?$usage}"
+desc="${2:?$usage}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 tap="${TAP_DIR:-$root/../../homebrew-tap/main}"
 app="${APP_DIR:-$root/../../$name/main}"
 repo="willsawyerrrr/$name"
-formula="$tap/Formula/$name.rb"
-
-[[ ! -e "$formula" ]] || { echo "$formula already exists" >&2; exit 1; }
-
-tag="$(gh api "repos/$repo/releases/latest" --jq .tag_name)"
-url="https://github.com/$repo/archive/refs/tags/$tag.tar.gz"
-sha="$(curl -fsSL "$url" | shasum -a 256 | cut -d' ' -f1)"
 class="$(awk -F- '{for (i = 1; i <= NF; i++) printf "%s%s", toupper(substr($i, 1, 1)), substr($i, 2)}' <<< "$name")"
+bundle="${APP_BUNDLE:-$class}"
 
 fill() {
   sed -e "s|@CLASS@|$class|g" -e "s|@DESC@|$desc|g" -e "s|@REPO@|$repo|g" \
-    -e "s|@URL@|$url|g" -e "s|@SHA@|$sha|g" -e "s|@NAME@|$name|g" "$1"
+    -e "s|@URL@|${url:-}|g" -e "s|@SHA@|${sha:-}|g" -e "s|@NAME@|$name|g" \
+    -e "s|@APP@|$bundle|g" -e "s|@VERSION@|${version:-}|g" "$1"
 }
 
-mkdir -p "$tap/Formula" "$app/.github/workflows"
-fill "$root/templates/formula.rb" > "$formula"
-fill "$root/templates/app-release.yml" > "$app/.github/workflows/release.yml"
-echo "Wrote $formula and $app/.github/workflows/release.yml"
+if $cask; then
+  target="$tap/Casks/$name.rb"
+  [[ ! -e "$target" ]] || { echo "$target already exists" >&2; exit 1; }
+  version=0.0.0
+  sha="$(printf '0%.0s' {1..64})"
+  if tag="$(gh api "repos/$repo/releases/latest" --jq .tag_name 2>/dev/null)"; then
+    url="https://github.com/$repo/releases/download/$tag/$bundle.zip"
+    if released="$(curl -fsSL "$url" | shasum -a 256 | cut -d' ' -f1)" && [[ -n "$released" ]]; then
+      version="${tag#v}"
+      sha="$released"
+    fi
+  fi
+  mkdir -p "$tap/Casks" "$app/.github/workflows"
+  fill "$root/templates/cask.rb" > "$target"
+  fill "$root/templates/app-release-cask.yml" > "$app/.github/workflows/release.yml"
+  readme="$tap/README.md"
+  if [[ -f "$readme" ]] && ! grep -q "^| \`$name\` " "$readme"; then
+    echo "| \`$name\` | $desc |" >> "$readme"
+  fi
+else
+  target="$tap/Formula/$name.rb"
+  [[ ! -e "$target" ]] || { echo "$target already exists" >&2; exit 1; }
+  tag="$(gh api "repos/$repo/releases/latest" --jq .tag_name)"
+  url="https://github.com/$repo/archive/refs/tags/$tag.tar.gz"
+  sha="$(curl -fsSL "$url" | shasum -a 256 | cut -d' ' -f1)"
+  mkdir -p "$tap/Formula" "$app/.github/workflows"
+  fill "$root/templates/formula.rb" > "$target"
+  fill "$root/templates/app-release.yml" > "$app/.github/workflows/release.yml"
+fi
+echo "Wrote $target and $app/.github/workflows/release.yml"
