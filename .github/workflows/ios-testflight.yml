@@ -107,6 +107,19 @@ jobs:
             -authenticationKeyPath "$RUNNER_TEMP/asc/key.p8" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+      - name: Attach the build to its App Store version
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          app="$(echo "$RUNNER_TEMP"/app.xcarchive/Products/Applications/*.app)"
+          plist="$app/Info.plist"
+          read_key() { /usr/libexec/PlistBuddy -c "Print :$1" "$plist"; }
+          curl -fsS https://raw.githubusercontent.com/willsawyerrrr/platform/main/scripts/attach-build -o "$RUNNER_TEMP/attach-build"
+          node "$RUNNER_TEMP/attach-build" "$RUNNER_TEMP/asc/key.p8" \
+            "$(read_key CFBundleIdentifier)" \
+            "$(read_key CFBundleShortVersionString)" \
+            "$(read_key CFBundleVersion)"
       - name: Remove the API key
         if: always()
         run: rm -r "$RUNNER_TEMP/asc"
