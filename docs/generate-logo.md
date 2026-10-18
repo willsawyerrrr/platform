@@ -9,4 +9,4 @@ scripts/generate-logo [--svg] [--out <dir>] <app-name> "<description>"
 - Writes `<dir>/<app-name>.png` (1024x1024), or `.svg` with `--svg`.
 - Needs `jq` and `RECRAFT_API_KEY`, taken from the environment or `$ENV_FILE` (default `~/willsawyerrrr.dev/.env`).
 - Costs about $0.04 per PNG and $0.08 per SVG.
-- The `generate-logo` Claude skill in `.claude/skills/` wraps the script. Symlink it into `~/.config/claude/skills/` to use it from every project.
+- From another project, run it by path: `~/willsawyerrrr.dev/platform/main/scripts/generate-logo`.
