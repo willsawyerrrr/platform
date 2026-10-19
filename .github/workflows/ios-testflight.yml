@@ -129,6 +129,9 @@ jobs:
             -authenticationKeyPath "$RUNNER_TEMP/asc/key.p8" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
       - name: Attach the build to its App Store version
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
