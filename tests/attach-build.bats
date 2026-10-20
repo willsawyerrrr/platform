@@ -60,6 +60,21 @@ attach_patch='{ "expect": "PATCH /v1/appStoreVersions/V1/relationships/build", "
   assert_output 'App Store version 1.2 is WAITING_FOR_REVIEW and cannot take a new build; leaving it as it is'
 }
 
+@test "renames the editable App Store version when its number differs" {
+  echo "[$app, $valid,
+    { \"expect\": \"GET /v1/apps/A1/appStoreVersions?\", \"body\": { \"data\": [
+      { \"id\": \"V0\", \"attributes\": { \"versionString\": \"1.1\", \"appStoreState\": \"READY_FOR_SALE\" } },
+      { \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.0\", \"appStoreState\": \"PREPARE_FOR_SUBMISSION\" } }] } },
+    { \"expect\": \"PATCH /v1/appStoreVersions/V1\", \"body\": { \"data\": { \"id\": \"V1\" } } },
+    $attach_patch]" > "$FETCH_ROUTES"
+  attach
+  assert_success
+  assert_line 'Renamed App Store version 1.0 to 1.2'
+  assert_line 'Attached build 42 to App Store version 1.2'
+  run cat "$FETCH_LOG"
+  assert_line --partial '"versionString":"1.2"'
+}
+
 @test "waits for the build to finish processing" {
   processing='{ "expect": "GET /v1/builds?", "body": { "data": [{ "id": "B1", "attributes": { "processingState": "PROCESSING" } }] } }'
   echo "[$app, $processing, $processing, $valid,
