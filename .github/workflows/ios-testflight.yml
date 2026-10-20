@@ -84,7 +84,7 @@ jobs:
           jq -c '.[].buildSettings | select(.CODE_SIGN_ENTITLEMENTS // "" != "")' <<< "$settings" | while read -r target; do
             id="$(jq -r .PRODUCT_BUNDLE_IDENTIFIER <<< "$target")"
             src="$(jq -r '.SRCROOT + "/" + .CODE_SIGN_ENTITLEMENTS' <<< "$target")"
-            team="$(jq -r '.DEVELOPMENT_TEAM // ""' <<< "$target")"
+            team="${DEVELOPMENT_TEAM:-$(jq -r '.DEVELOPMENT_TEAM // ""' <<< "$target")}"
             [[ -f "$src" ]] || continue
             expanded="$RUNNER_TEMP/$id.entitlements"
             sed -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/$id/g" \
