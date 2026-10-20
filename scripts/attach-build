@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Attach a processed build to the app's editable App Store version, creating
-// the version if none exists, via the App Store Connect API. A version that
-// exists but is no longer editable (e.g. in review) is left as it is.
+// the version if none exists, via the App Store Connect API. An app has one
+// editable version at a time, so an editable version with another number is
+// renamed to the build's. A version that exists but is no longer editable
+// (e.g. in review) is left as it is.
 //
 // Usage: attach-build <key.p8> <bundle-id> <version> <build-number>
 //
@@ -76,6 +78,14 @@ if (appStoreVersion && !editable.includes(appStoreVersion.attributes.appStoreSta
     `App Store version ${version} is ${appStoreVersion.attributes.appStoreState} and cannot take a new build; leaving it as it is`,
   );
   process.exit(0);
+}
+const stale = versions.data.find((v) => editable.includes(v.attributes.appStoreState));
+if (!appStoreVersion && stale) {
+  await api("PATCH", `/v1/appStoreVersions/${stale.id}`, {
+    data: { type: "appStoreVersions", id: stale.id, attributes: { versionString: version } },
+  });
+  appStoreVersion = stale;
+  console.log(`Renamed App Store version ${stale.attributes.versionString} to ${version}`);
 }
 if (!appStoreVersion) {
   appStoreVersion = (
