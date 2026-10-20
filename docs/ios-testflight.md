@@ -26,6 +26,6 @@ with:
     DEVELOPMENT_TEAM=${{ vars.DEVELOPMENT_TEAM }}
 ```
 
-After the upload, `scripts/attach-build` waits for App Store Connect to process the build, then attaches it to the app's editable App Store version for the marketing version, creating that version if none exists. The listing shows a placeholder icon until a build is attached, so this gives it the build's icon. The version is not submitted for review.
+After the upload, `scripts/attach-build` waits for App Store Connect to process the build, then attaches it to the app's editable App Store version for the marketing version, creating that version if none exists; a version that is already in review or released is left as it is. The listing shows a placeholder icon until a build is attached, so this gives it the build's icon. The version is not submitted for review.
 
 The build number is the run number, so every upload is unique. The marketing version comes from the project.

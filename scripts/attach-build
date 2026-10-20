@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Attach a processed build to the app's editable App Store version, creating
-// the version if none exists, via the App Store Connect API.
+// the version if none exists, via the App Store Connect API. A version that
+// exists but is no longer editable (e.g. in review) is left as it is.
 //
 // Usage: attach-build <key.p8> <bundle-id> <version> <build-number>
 //
@@ -67,12 +68,15 @@ if (build?.attributes.processingState !== "VALID") throw new Error(`Build ${buil
 const editable = ["PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"];
 const versions = await api(
   "GET",
-  `/v1/apps/${appId}/appStoreVersions?${query({
-    "filter[platform]": "IOS",
-    "filter[appStoreState]": editable.join(","),
-  })}`,
+  `/v1/apps/${appId}/appStoreVersions?${query({ "filter[platform]": "IOS", limit: "200" })}`,
 );
 let appStoreVersion = versions.data.find((v) => v.attributes.versionString === version);
+if (appStoreVersion && !editable.includes(appStoreVersion.attributes.appStoreState)) {
+  console.log(
+    `App Store version ${version} is ${appStoreVersion.attributes.appStoreState} and cannot take a new build; leaving it as it is`,
+  );
+  process.exit(0);
+}
 if (!appStoreVersion) {
   appStoreVersion = (
     await api("POST", "/v1/appStoreVersions", {

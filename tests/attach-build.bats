@@ -26,8 +26,8 @@ attach_patch='{ "expect": "PATCH /v1/appStoreVersions/V1/relationships/build", "
 @test "attaches the build to the existing App Store version" {
   echo "[$app, $valid,
     { \"expect\": \"GET /v1/apps/A1/appStoreVersions?\", \"body\": { \"data\": [
-      { \"id\": \"V0\", \"attributes\": { \"versionString\": \"1.1\" } },
-      { \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.2\" } }] } },
+      { \"id\": \"V0\", \"attributes\": { \"versionString\": \"1.1\", \"appStoreState\": \"READY_FOR_SALE\" } },
+      { \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.2\", \"appStoreState\": \"PREPARE_FOR_SUBMISSION\" } }] } },
     $attach_patch]" > "$FETCH_ROUTES"
   attach
   assert_success
@@ -52,10 +52,18 @@ attach_patch='{ "expect": "PATCH /v1/appStoreVersions/V1/relationships/build", "
   assert_line --partial '"versionString":"1.2"'
 }
 
+@test "leaves an App Store version that is no longer editable" {
+  echo "[$app, $valid,
+    { \"expect\": \"GET /v1/apps/A1/appStoreVersions?\", \"body\": { \"data\": [{ \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.2\", \"appStoreState\": \"WAITING_FOR_REVIEW\" } }] } }]" > "$FETCH_ROUTES"
+  attach
+  assert_success
+  assert_output 'App Store version 1.2 is WAITING_FOR_REVIEW and cannot take a new build; leaving it as it is'
+}
+
 @test "waits for the build to finish processing" {
   processing='{ "expect": "GET /v1/builds?", "body": { "data": [{ "id": "B1", "attributes": { "processingState": "PROCESSING" } }] } }'
   echo "[$app, $processing, $processing, $valid,
-    { \"expect\": \"GET /v1/apps/A1/appStoreVersions?\", \"body\": { \"data\": [{ \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.2\" } }] } },
+    { \"expect\": \"GET /v1/apps/A1/appStoreVersions?\", \"body\": { \"data\": [{ \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.2\", \"appStoreState\": \"PREPARE_FOR_SUBMISSION\" } }] } },
     $attach_patch]" > "$FETCH_ROUTES"
   attach
   assert_success
