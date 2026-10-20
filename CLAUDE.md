@@ -10,3 +10,4 @@ Shared reusable workflows, scripts and templates for willsawyerrrr.dev projects.
 - `scripts/add-app` handles both formulae and casks (`--cask`); keep the formula and cask paths, their templates and `docs/homebrew-tap.md` in sync.
 - `ci.yml` ends with a `CI Status` job that `needs:` every other job in the workflow; add new jobs to its `needs:`. The `main` ruleset requires a pull request (squash merges only) and `CI Status`, and blocks force pushes and deletion.
 - `ci.yml` runs pre-commit on Python 3.15, pinned by `.python-version` (the local toolchain).
+- `tests/` holds bats tests (`bats tests/`) for `scripts/*` and the templates `add-app` renders; add or update tests with every script change. They stub `gh`, `curl`, `git`, `xcrun` etc. on `PATH` (and `fetch` for `attach-build`) so nothing touches the network. CI runs them in the `test` job.

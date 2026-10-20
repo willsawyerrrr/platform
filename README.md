@@ -26,3 +26,16 @@ Called from apps as `willsawyerrrr/platform/.github/workflows/<name>@main`.
 ## Templates
 
 `templates/` holds the formula, cask and workflow files `scripts/add-app` and the docs copy into apps and the tap. Placeholders such as `@NAME@` are substituted when used.
+
+## Tests
+
+`tests/` holds [bats](https://github.com/bats-core/bats-core) tests for the scripts and the templates they render. Network tools are stubbed, so they run offline.
+
+```sh
+brew install bats-core node openssl jq
+git clone https://github.com/bats-core/bats-support ~/.local/lib/bats/bats-support
+git clone https://github.com/bats-core/bats-assert ~/.local/lib/bats/bats-assert
+BATS_LIB_PATH=~/.local/lib/bats bats tests/
+```
+
+CI runs them in the `test` job, which `CI Status` requires.
