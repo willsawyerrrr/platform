@@ -18,10 +18,20 @@ jobs:
           python-version-file: .python-version
       - uses: pre-commit/action@v3.0.1
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - uses: bats-core/bats-action@4.0.0
+      - run: bats tests/
+
   ci-status:
     name: CI Status
     if: always()
-    needs: [lint]
+    needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any job failed or was cancelled
