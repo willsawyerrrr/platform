@@ -17,6 +17,7 @@ The app record must exist in App Store Connect and the signing team must be set,
 
 - `scheme` (required): scheme to archive.
 - `project-dir` (default `ios`): holds `project.yml` (generated with `xcodegen`) or the single `.xcodeproj`.
+- `marketing-version` (default `0.1.0`): the `MARKETING_VERSION` the project must declare for the scheme's Release configuration. The `Check the marketing version` step fails the run before archiving otherwise. Internal builds all use `0.1.0`, so an app never has TestFlight groups for both `1.0` and `0.1.0`; set it to e.g. `1.0` to ship that version.
 - `env`: newline-separated `KEY=value` pairs exported before project generation, e.g. variables substituted by `xcodegen`.
   - `DEVELOPMENT_TEAM`: when non-empty, passed to `xcodebuild archive` as a build setting and to the export options as `teamID`, keeping the team ID out of the repo. Omit it when the project sets the team: the unsigned archive records no team, so the export reads it from the project's `DEVELOPMENT_TEAM` build setting.
 
@@ -28,4 +29,4 @@ with:
 
 After the upload, `scripts/attach-build` waits for App Store Connect to process the build, then attaches it to the app's editable App Store version for the marketing version, renaming the editable version if it has another number, or creating the version if none exists; a version that is already in review or released is left as it is. The listing shows a placeholder icon until a build is attached, so this gives it the build's icon. The version is not submitted for review.
 
-The build number is the run number, so every upload is unique. The marketing version comes from the project.
+The build number is the run number, so every upload is unique. The marketing version comes from the project and must match `marketing-version`.
