@@ -7,7 +7,7 @@ Apps are published to [`willsawyerrrr/homebrew-tap`](https://github.com/willsawy
 1. Cut the app's first release (`gh release create v0.1.0 --generate-notes`).
 2. `scripts/add-app <app-repo> "<description>"` scaffolds `Formula/<app>.rb` in the tap and `.github/workflows/release.yml` in the app.
 3. Fill in the formula's `install` and `test` blocks; run `brew install --build-from-source` and `brew audit --strict` against it.
-4. Set up [1Password Environments](1password-environments.md) for the app repo, with the tap's deploy key as `TAP_DEPLOY_KEY` in the project's Environment or the Platform Environment (`3wm7pn2k5bnmyuzqznz33lufp4`), listed in `OP_ENVIRONMENT_IDS`.
+4. Set up [1Password Environments](1password-environments.md) for the app repo, with `OP_ENVIRONMENT_IDS` including General Purpose (`3i642eynjpsx2uctyqlexobgge`), which holds the tap's deploy key as `TAP_DEPLOY_KEY`.
 5. Commit and push the formula (tap) and workflow (app).
 
 ### Add a cask app
@@ -15,7 +15,7 @@ Apps are published to [`willsawyerrrr/homebrew-tap`](https://github.com/willsawy
 1. `scripts/add-app --cask <app-repo> "<description>"` scaffolds `Casks/<app>.rb` in the tap (and a row in the tap's README table) and a cask `.github/workflows/release.yml` in the app. The bundle is `<App>.app` in `<App>.zip`, where `<App>` is the repo name in PascalCase; override with `APP_BUNDLE`.
 2. Replace the workflow's `build-command` with the app's packaging command (it must produce `<App>.zip` at the repo root) and adjust the cask's `zap` stanza and `depends_on macos:`. Add `binary` stanzas if the app ships a CLI.
 3. No release is needed first: the cask starts at the latest release if it has the zip, else at `0.0.0` with a zero checksum that the first release replaces.
-4. Set up the app repo's Environment with the tap's deploy key, as above, and any signing variables (see Casks).
+4. Set up the app repo's Environments as above; for signing, add Apple Development (`b5zkkwxuutlttwbrv5xhgojye4`) to `OP_ENVIRONMENT_IDS` (see Casks).
 5. Run `brew style --fix` and `brew audit --cask --online <app>` in the tap, then commit and push the cask (tap) and workflow (app). The online audit needs the first release's zip, so it only passes once that release exists; the tap's CI runs the same checks.
 
 ## Release a new version
@@ -24,7 +24,7 @@ Merge to the app's `main`. The shared `release.yml` workflow tags the next versi
 
 ## Workflows
 
-- `release.yml`: reusable. Inputs: `formula` or `cask` (mutually exclusive; omit both to skip Homebrew), and, with `cask`, `build-command` and `asset`. Secret `OP_SERVICE_ACCOUNT_TOKEN` and variable `OP_ENVIRONMENT_IDS`; the Environments hold `TAP_DEPLOY_KEY` and, for signing (Platform Environment `3wm7pn2k5bnmyuzqznz33lufp4`), `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`.
+- `release.yml`: reusable. Inputs: `formula` or `cask` (mutually exclusive; omit both to skip Homebrew), and, with `cask`, `build-command` and `asset`. Secret `OP_SERVICE_ACCOUNT_TOKEN` and variable `OP_ENVIRONMENT_IDS`; the Environments hold `TAP_DEPLOY_KEY` (General Purpose, `3i642eynjpsx2uctyqlexobgge`) and, for signing (Apple Development, `b5zkkwxuutlttwbrv5xhgojye4`), `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`.
 - `homebrew.yml`: reusable. Inputs: `tag`; `formula` (default: calling repo's name) or `cask`; `asset` (with `cask`). Secret `OP_SERVICE_ACCOUNT_TOKEN` and variable `OP_ENVIRONMENT_IDS`; the Environments hold `TAP_DEPLOY_KEY`.
 
 ## Casks

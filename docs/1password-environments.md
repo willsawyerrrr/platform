@@ -13,30 +13,34 @@ Reusable workflows load the Environments with the composite action `.github/acti
     environments: ${{ vars.OP_ENVIRONMENT_IDS }}
 ```
 
-`environments` is a whitespace-separated list of Environment IDs, the shared Apple Development Environment (`b5zkkwxuutlttwbrv5xhgojye4`) first and the project's last (`OP_ENVIRONMENT_IDS` = `b5zkkwxuutlttwbrv5xhgojye4 <project-id>`). When several Environments define the same variable, the last one listed wins.
+`environments` is a whitespace-separated list of Environment IDs: shared Environments first, the project's own last. When several Environments define the same variable, the last one listed wins.
+
+Shared Environments:
+
+- Apple Development (`b5zkkwxuutlttwbrv5xhgojye4`): `DEVELOPMENT_TEAM`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`.
+- General Purpose (`3i642eynjpsx2uctyqlexobgge`): `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PAT`, `VERCEL_TOKEN`, `GITHUB_TOKEN`, `LINEAR_API_KEY`, `VAPI_API_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `RECRAFT_API_KEY`, `RESEND_API_KEY`, `DIGITALOCEAN_TOKEN`, `HF_TOKEN`, `TAILSCALE_AUTHKEY`, `TAP_DEPLOY_KEY`.
 
 Per calling repo:
 
-- A service account, created at 1Password.com → Developer → Directory → Other → Create a Service Account. Choose its Environments at creation; access is read-only and cannot be changed afterwards. Use one service account per repo, scoped to that repo's Environments.
+- A service account, created at 1Password.com → Developer → Directory → Other → Create a Service Account. Choose its Environments at creation; access is read-only and cannot be changed afterwards. Use one service account per repo, scoped to the Environments listed in `OP_ENVIRONMENT_IDS`.
 - Secret `OP_SERVICE_ACCOUNT_TOKEN`: the service account's token.
-- Variable `OP_ENVIRONMENT_IDS`: one or more Environment IDs, in precedence order. Set it to the Apple Development ID first and the project's ID last, e.g. `b5zkkwxuutlttwbrv5xhgojye4 <project-id>`; an app with no Environment of its own sets just `b5zkkwxuutlttwbrv5xhgojye4`.
-- The Environments hold the variables the workflows use. `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` and `DEVELOPMENT_TEAM` live only in the shared Apple Development Environment (`b5zkkwxuutlttwbrv5xhgojye4`); the Platform Environment (`3wm7pn2k5bnmyuzqznz33lufp4`) holds `TAP_DEPLOY_KEY`, `RECRAFT_API_KEY`, `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID` and `NOTARY_ISSUER_ID`. Platform's own workflows load no Environment.
+- Variable `OP_ENVIRONMENT_IDS`: every Environment the repo's workflows need, in precedence order, e.g. `b5zkkwxuutlttwbrv5xhgojye4 3i642eynjpsx2uctyqlexobgge <project-id>`. An iOS app needs Apple Development; a Homebrew formula needs General Purpose; a signed cask needs both.
+
+Platform's own workflows load no Environment.
 
 | Workflow | Variables |
 | --- | --- |
-| `ios-testflight.yml` | `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `DEVELOPMENT_TEAM` (all from Apple Development) |
-| `release.yml` (cask signing, all optional) | `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` |
-| `homebrew.yml` | `TAP_DEPLOY_KEY` (from the project or Platform Environment) |
-| `scripts/generate-logo` (local) | `RECRAFT_API_KEY` |
+| `ios-testflight.yml` | `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `DEVELOPMENT_TEAM` (Apple Development) |
+| `release.yml` (cask signing, all optional) | `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` (Apple Development) |
+| `homebrew.yml` | `TAP_DEPLOY_KEY` (General Purpose) |
+| `scripts/generate-logo` (local) | `RECRAFT_API_KEY` (General Purpose) |
 
 ## Local development
 
-Run commands under `op run` so the Environment's variables are set for the command only:
+Run commands under `op run` so the Environments' variables are set for the command only:
 
 ```sh
-op run --environment "$OP_ENVIRONMENT_ID" -- <command>
+op run --environment <environment-id> -- <command>
 ```
 
-Repeat `--environment` to merge several Environments; the last wins on duplicate names. Platform's Environment is `3wm7pn2k5bnmyuzqznz33lufp4`; the shared Apple Development Environment is `b5zkkwxuutlttwbrv5xhgojye4`.
-
-Set `OP_ENVIRONMENT_ID` in your shell. Copy the ID from the 1Password app → Developer → View Environments → Manage environment → Copy environment ID. `scripts/generate-logo` runs itself under `op run` when `RECRAFT_API_KEY` is unset and `OP_ENVIRONMENT_ID` is set.
+Repeat `--environment` to merge several Environments; the last wins on duplicate names. Copy an ID from the 1Password app → Developer → View Environments → Manage environment → Copy environment ID. `scripts/generate-logo` runs itself under `op run` with General Purpose (`3i642eynjpsx2uctyqlexobgge`) when `RECRAFT_API_KEY` is unset and the 1Password CLI is installed.

@@ -6,7 +6,7 @@ The archive is unsigned (`CODE_SIGNING_ALLOWED=NO`) and uses no API key. The `Em
 
 ## Set up an app
 
-Copy `templates/app-ios-testflight.yml` to `.github/workflows/deploy-ios.yml`, replacing `@NAME@` with the scheme. Set up [1Password Environments](1password-environments.md) for the repo, with `OP_ENVIRONMENT_IDS` starting with the shared Apple Development Environment (`b5zkkwxuutlttwbrv5xhgojye4`). It holds these variables, so the app's own Environment does not:
+Copy `templates/app-ios-testflight.yml` to `.github/workflows/deploy-ios.yml`, replacing `@NAME@` with the scheme. Set up [1Password Environments](1password-environments.md) for the repo, with `OP_ENVIRONMENT_IDS` starting with the shared Apple Development Environment (`b5zkkwxuutlttwbrv5xhgojye4`). It holds these variables:
 
 - `ASC_KEY_ID`, `ASC_ISSUER_ID`: from App Store Connect → Users and Access → Integrations. The key needs the Admin role, which cloud signing requires.
 - `ASC_KEY_P8`: the contents of the downloaded `.p8`.

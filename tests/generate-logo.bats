@@ -22,7 +22,8 @@ setup() {
 }
 
 @test "fails without an API key" {
-  unset RECRAFT_API_KEY OP_ENVIRONMENT_ID
+  unset RECRAFT_API_KEY
+  PATH="$BATS_TEST_TMPDIR/empty:$(dirname "$(command -v bash)")"
   run "$ROOT/scripts/generate-logo" my-app "A logo"
   assert_failure
   assert_output --partial 'RECRAFT_API_KEY is not set'
@@ -50,12 +51,11 @@ setup() {
 
 @test "loads the API key from the 1Password Environment" {
   unset RECRAFT_API_KEY
-  export OP_ENVIRONMENT_ID=env-id
   stub op 'shift 3; RECRAFT_API_KEY=key-from-op exec "$@"'
   run "$ROOT/scripts/generate-logo" --out "$SANDBOX/out" my-app "A fox"
   assert_success
   run cat "$CALLS"
-  assert_line --partial 'op run --environment env-id -- '
+  assert_line --partial 'op run --environment 3i642eynjpsx2uctyqlexobgge -- '
   assert_line --partial 'Bearer key-from-op'
 }
 
