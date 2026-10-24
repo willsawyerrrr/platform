@@ -4,9 +4,13 @@
 # Usage: generate-logo [--svg] [--out <dir>] <app-name> "<description>"
 #
 # Writes `<dir>/<app-name>.png` (1024x1024, default `.`), or `<app-name>.svg`
-# with `--svg`. Reads `RECRAFT_API_KEY` from the environment or `$ENV_FILE`
-# (default `~/willsawyerrrr.dev/.env`).
+# with `--svg`. Reads `RECRAFT_API_KEY` from the environment; when unset, re-runs
+# itself under `op run --environment "$OP_ENVIRONMENT_ID"`.
 set -euo pipefail
+
+if [[ -z "${RECRAFT_API_KEY:-}" && -n "${OP_ENVIRONMENT_ID:-}" ]]; then
+  exec op run --environment "$OP_ENVIRONMENT_ID" -- "$0" "$@"
+fi
 
 usage() { echo "usage: generate-logo [--svg] [--out <dir>] <app-name> \"<description>\"" >&2; exit 1; }
 
@@ -21,10 +25,7 @@ done
 name="${1:-}" desc="${2:-}"
 [[ -n "$name" && -n "$desc" ]] || usage
 
-if [[ -z "${RECRAFT_API_KEY:-}" ]]; then
-  RECRAFT_API_KEY="$(sed -n 's/^RECRAFT_API_KEY=//p' "${ENV_FILE:-$HOME/willsawyerrrr.dev/.env}")"
-fi
-[[ -n "$RECRAFT_API_KEY" ]] || { echo "RECRAFT_API_KEY is not set" >&2; exit 1; }
+[[ -n "${RECRAFT_API_KEY:-}" ]] || { echo "RECRAFT_API_KEY is not set (set OP_ENVIRONMENT_ID to load it from 1Password)" >&2; exit 1; }
 
 prompt="App icon logo for \"$name\": $desc. Single bold centred mark, flat colours, simple shapes, no text, full-bleed square background."
 body="$(jq -n --arg p "$prompt" --arg m "$model" '{prompt: $p, model: $m, size: "1024x1024"}')"

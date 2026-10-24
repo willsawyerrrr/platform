@@ -6,6 +6,7 @@ Engineering platform shared by all willsawyerrrr.dev projects.
 - [iOS device deploy](docs/ios-device-deploy.md): keep an app installed on the paired iPhone.
 - [iOS TestFlight deploy](docs/ios-testflight.md): ship an app to TestFlight from GitHub Actions.
 - [Generate app logos](docs/generate-logo.md): create a logo with Recraft.
+- [1Password Environments](docs/1password-environments.md): load CI and local secrets from 1Password.
 
 ## Reusable workflows
 

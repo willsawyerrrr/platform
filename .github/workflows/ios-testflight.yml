@@ -20,16 +20,13 @@ on:
         type: string
         default: ""
     secrets:
-      ASC_KEY_ID:
-        required: true
-      ASC_ISSUER_ID:
-        required: true
-      ASC_KEY_P8:
-        description: Contents of the App Store Connect API key (`.p8`).
+      OP_INTEGRATION_KEY:
+        description: Service account integration key for the 1Password Environment that holds the secrets.
         required: true
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   testflight:
@@ -37,11 +34,17 @@ jobs:
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app
+      OP_WORKLOAD_ID: ${{ vars.OP_WORKLOAD_ID }}
+      OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+      OP_INTEGRATION_KEY: ${{ secrets.OP_INTEGRATION_KEY }}
     defaults:
       run:
         working-directory: ${{ inputs.project-dir }}
     steps:
       - uses: actions/checkout@v7
+      - uses: 1password/load-secrets-action@v5
+        with:
+          export-env: true
       - name: Export build environment
         env:
           BUILD_ENV: ${{ inputs.env }}
@@ -66,8 +69,6 @@ jobs:
             exit 1
           }
       - name: Write the App Store Connect API key
-        env:
-          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           mkdir -p "$RUNNER_TEMP/asc"
           printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/key.p8"
@@ -116,8 +117,6 @@ jobs:
       - name: Upload to TestFlight
         env:
           SCHEME: ${{ inputs.scheme }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           team="${DEVELOPMENT_TEAM:-}"
           if [[ -z "$team" ]]; then
@@ -150,9 +149,6 @@ jobs:
         with:
           node-version: 26
       - name: Attach the build to its App Store version
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           app="$(echo "$RUNNER_TEMP"/app.xcarchive/Products/Applications/*.app)"
           plist="$app/Info.plist"
