@@ -2,7 +2,7 @@
 setup() {
   load test_helper
   setup_sandbox
-  export ENV_FILE="$SANDBOX/env" RECRAFT_API_KEY=key-from-env
+  export RECRAFT_API_KEY=key-from-env
   stub curl '
     out=""; while [[ $# -gt 0 ]]; do [[ "$1" != -o ]] || out="$2"; shift; done
     if [[ -n "${CURL_FAIL:-}" ]]; then exit 22; fi
@@ -23,10 +23,10 @@ setup() {
 
 @test "fails without an API key" {
   unset RECRAFT_API_KEY
-  echo "OTHER=1" > "$ENV_FILE"
+  PATH="$BATS_TEST_TMPDIR/empty:$(dirname "$(command -v bash)")"
   run "$ROOT/scripts/generate-logo" my-app "A logo"
   assert_failure
-  assert_output 'RECRAFT_API_KEY is not set'
+  assert_output --partial 'RECRAFT_API_KEY is not set'
   assert_equal "$(cat "$CALLS")" ''
 }
 
@@ -49,13 +49,14 @@ setup() {
   assert_line --partial '"model": "recraftv4_vector"'
 }
 
-@test "reads the API key from the env file" {
+@test "loads the API key from the 1Password Environment" {
   unset RECRAFT_API_KEY
-  echo "RECRAFT_API_KEY=key-from-file" > "$ENV_FILE"
+  stub op 'shift 3; RECRAFT_API_KEY=key-from-op exec "$@"'
   run "$ROOT/scripts/generate-logo" --out "$SANDBOX/out" my-app "A fox"
   assert_success
   run cat "$CALLS"
-  assert_line --partial 'Bearer key-from-file'
+  assert_line --partial 'op run --environment 3i642eynjpsx2uctyqlexobgge -- '
+  assert_line --partial 'Bearer key-from-op'
 }
 
 @test "fails when the API call fails" {

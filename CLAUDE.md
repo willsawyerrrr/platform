@@ -7,6 +7,7 @@ Shared reusable workflows, scripts and templates for willsawyerrrr.dev projects.
 - `scripts/attach-build` runs on Node 26 in CI (`setup-node` in `ios-testflight.yml`) and locally (`.nvmrc`).
 - `ios-testflight.yml` fails before archiving unless `MARKETING_VERSION` equals its `marketing-version` input (default `0.1.0`).
 - Keep `docs/` in sync with workflows, scripts and templates.
+- Secrets come from shared 1Password Environments (Apple Development, General Purpose), never `secrets.*`/`vars.*` beyond `secrets.OP_SERVICE_ACCOUNT_TOKEN` and `vars.OP_ENVIRONMENT_IDS`: workflows load them with `.github/actions/load-op-environment` and scripts via `op run --environment <id>`. Keep `docs/1password-environments.md` in sync.
 - `templates/` use `@NAME@`-style placeholders and are not valid workflows, formulae or casks until filled.
 - `scripts/add-app` handles both formulae and casks (`--cask`); keep the formula and cask paths, their templates and `docs/homebrew-tap.md` in sync.
 - `ci.yml` ends with a `CI Status` job that `needs:` every other job in the workflow; add new jobs to its `needs:`. The `main` ruleset requires a pull request (squash merges only) and `CI Status`, and blocks force pushes and deletion.

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Export every variable defined by 1Password Environments to `$GITHUB_ENV`.
+#
+# Reads `OP_SERVICE_ACCOUNT_TOKEN` and `OP_ENVIRONMENTS` (whitespace-separated
+# Environment IDs; on duplicate names the last Environment wins) from the
+# environment. Each value is masked before it is written, one mask per line, so
+# multi-line values are masked too. The token itself is never exported.
+set -euo pipefail
+
+if [[ -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]]; then
+  echo "::error::service-account-token is empty; set the OP_SERVICE_ACCOUNT_TOKEN secret"
+  exit 1
+fi
+
+read -r -d '' -a ids <<< "${OP_ENVIRONMENTS:-}" || true
+if [[ ${#ids[@]} -eq 0 ]]; then
+  echo "::error::environments is empty; set the OP_ENVIRONMENT_IDS variable to one or more Environment IDs"
+  exit 1
+fi
+: "${GITHUB_ENV:?GITHUB_ENV is not set}"
+
+flags=()
+for id in "${ids[@]}"; do flags+=(--environment "$id"); done
+
+umask 077
+dump="$(mktemp)"
+trap 'rm -f "$dump"' EXIT
+op run --no-masking "${flags[@]}" -- env -0 > "$dump"
+
+# `op run` exposes the variables to its child only, so a variable is new or
+# changed when the child's value differs from this shell's.
+delimiter="ghadelimiter_$(openssl rand -hex 16)"
+while IFS= read -r -d '' record; do
+  name="${record%%=*}"
+  value="${record#*=}"
+  [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+  case "$name" in
+    OP_SERVICE_ACCOUNT_TOKEN | _ | SHLVL | PWD | OLDPWD) continue ;;
+  esac
+  if [[ -n "${!name+set}" && "${!name}" == "$value" ]]; then continue; fi
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "$line" ]] || echo "::add-mask::$line"
+  done <<< "$value"
+  printf '%s<<%s\n%s\n%s\n' "$name" "$delimiter" "$value" "$delimiter" >> "$GITHUB_ENV"
+done < "$dump"

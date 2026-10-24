@@ -20,7 +20,8 @@ on:
         type: string
         default: ""
     secrets:
-      TAP_DEPLOY_KEY:
+      OP_SERVICE_ACCOUNT_TOKEN:
+        description: Token of a service account with access to the 1Password Environments listed in the `OP_ENVIRONMENT_IDS` variable.
         required: true
 
 permissions:
@@ -30,11 +31,17 @@ jobs:
   formula:
     if: inputs.cask == ''
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
+      - uses: willsawyerrrr/platform/.github/actions/load-op-environment@main
+        with:
+          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          environments: ${{ vars.OP_ENVIRONMENT_IDS }}
       - uses: actions/checkout@v7
         with:
           repository: willsawyerrrr/homebrew-tap
-          ssh-key: ${{ secrets.TAP_DEPLOY_KEY }}
+          ssh-key: ${{ env.TAP_DEPLOY_KEY }}
       - name: Point the formula at this release
         env:
           TAG: ${{ inputs.tag }}
@@ -57,6 +64,8 @@ jobs:
   cask:
     if: inputs.cask != ''
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Check the inputs
         env:
@@ -65,10 +74,14 @@ jobs:
         run: |
           [[ -z "$FORMULA" ]] || { echo "::error::Set only one of formula and cask"; exit 1; }
           [[ -n "$ASSET" ]] || { echo "::error::cask requires asset"; exit 1; }
+      - uses: willsawyerrrr/platform/.github/actions/load-op-environment@main
+        with:
+          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          environments: ${{ vars.OP_ENVIRONMENT_IDS }}
       - uses: actions/checkout@v7
         with:
           repository: willsawyerrrr/homebrew-tap
-          ssh-key: ${{ secrets.TAP_DEPLOY_KEY }}
+          ssh-key: ${{ env.TAP_DEPLOY_KEY }}
       - name: Point the cask at this release
         env:
           TAG: ${{ inputs.tag }}
