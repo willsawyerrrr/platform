@@ -24,8 +24,8 @@ Merge to the app's `main`. The shared `release.yml` workflow tags the next versi
 
 ## Workflows
 
-- `release.yml`: reusable. Inputs: `formula` or `cask` (mutually exclusive; omit both to skip Homebrew), and, with `cask`, `build-command` and `asset`. Secret `OP_INTEGRATION_KEY`; the Environment holds `TAP_DEPLOY_KEY` and, for signing, `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`. Callers grant `id-token: write`.
-- `homebrew.yml`: reusable. Inputs: `tag`; `formula` (default: calling repo's name) or `cask`; `asset` (with `cask`). Secret `OP_INTEGRATION_KEY`; the Environment holds `TAP_DEPLOY_KEY`.
+- `release.yml`: reusable. Inputs: `formula` or `cask` (mutually exclusive; omit both to skip Homebrew), and, with `cask`, `build-command` and `asset`. Secret `OP_SERVICE_ACCOUNT_TOKEN` and variable `OP_ENVIRONMENT_IDS`; the Environments hold `TAP_DEPLOY_KEY` and, for signing, `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`.
+- `homebrew.yml`: reusable. Inputs: `tag`; `formula` (default: calling repo's name) or `cask`; `asset` (with `cask`). Secret `OP_SERVICE_ACCOUNT_TOKEN` and variable `OP_ENVIRONMENT_IDS`; the Environments hold `TAP_DEPLOY_KEY`.
 
 ## Casks
 

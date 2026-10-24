@@ -20,8 +20,8 @@ on:
         type: string
         default: ""
     secrets:
-      OP_INTEGRATION_KEY:
-        description: Service account integration key for the 1Password Environment that holds the secrets.
+      OP_SERVICE_ACCOUNT_TOKEN:
+        description: Token of a service account with access to the 1Password Environments listed in the `OP_ENVIRONMENT_IDS` variable.
         required: true
 
 permissions:
@@ -33,15 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
-    env:
-      OP_WORKLOAD_ID: ${{ vars.OP_WORKLOAD_ID }}
-      OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-      OP_INTEGRATION_KEY: ${{ secrets.OP_INTEGRATION_KEY }}
     steps:
-      - uses: 1password/load-secrets-action@v5
+      - uses: willsawyerrrr/platform/.github/actions/load-op-environment@main
         with:
-          export-env: true
+          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          environments: ${{ vars.OP_ENVIRONMENT_IDS }}
       - uses: actions/checkout@v7
         with:
           repository: willsawyerrrr/homebrew-tap
@@ -70,11 +66,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
-    env:
-      OP_WORKLOAD_ID: ${{ vars.OP_WORKLOAD_ID }}
-      OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-      OP_INTEGRATION_KEY: ${{ secrets.OP_INTEGRATION_KEY }}
     steps:
       - name: Check the inputs
         env:
@@ -83,9 +74,10 @@ jobs:
         run: |
           [[ -z "$FORMULA" ]] || { echo "::error::Set only one of formula and cask"; exit 1; }
           [[ -n "$ASSET" ]] || { echo "::error::cask requires asset"; exit 1; }
-      - uses: 1password/load-secrets-action@v5
+      - uses: willsawyerrrr/platform/.github/actions/load-op-environment@main
         with:
-          export-env: true
+          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          environments: ${{ vars.OP_ENVIRONMENT_IDS }}
       - uses: actions/checkout@v7
         with:
           repository: willsawyerrrr/homebrew-tap

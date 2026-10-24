@@ -20,13 +20,12 @@ on:
         type: string
         default: ""
     secrets:
-      OP_INTEGRATION_KEY:
-        description: Service account integration key for the 1Password Environment that holds the secrets.
+      OP_SERVICE_ACCOUNT_TOKEN:
+        description: Token of a service account with access to the 1Password Environments listed in the `OP_ENVIRONMENT_IDS` variable.
         required: true
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   testflight:
@@ -34,17 +33,15 @@ jobs:
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app
-      OP_WORKLOAD_ID: ${{ vars.OP_WORKLOAD_ID }}
-      OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-      OP_INTEGRATION_KEY: ${{ secrets.OP_INTEGRATION_KEY }}
     defaults:
       run:
         working-directory: ${{ inputs.project-dir }}
     steps:
       - uses: actions/checkout@v7
-      - uses: 1password/load-secrets-action@v5
+      - uses: willsawyerrrr/platform/.github/actions/load-op-environment@main
         with:
-          export-env: true
+          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          environments: ${{ vars.OP_ENVIRONMENT_IDS }}
       - name: Export build environment
         env:
           BUILD_ENV: ${{ inputs.env }}

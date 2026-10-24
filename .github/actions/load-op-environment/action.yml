@@ -1,0 +1,21 @@
+name: Load 1Password Environments
+description: Exports every variable defined by one or more 1Password Environments to later steps, masking each value.
+
+inputs:
+  service-account-token:
+    description: Service account token with access to the Environments.
+    required: true
+  environments:
+    description: Whitespace-separated Environment IDs, in precedence order; the last Environment wins on duplicate variable names.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: 1password/install-cli-action@v4
+    - name: Export the Environments
+      shell: bash
+      env:
+        OP_SERVICE_ACCOUNT_TOKEN: ${{ inputs.service-account-token }}
+        OP_ENVIRONMENTS: ${{ inputs.environments }}
+      run: ${{ github.action_path }}/export-environment

@@ -10,7 +10,6 @@ concurrency: deploy-ios
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   testflight:

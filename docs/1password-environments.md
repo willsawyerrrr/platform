@@ -1,28 +1,26 @@
 # 1Password Environments
 
-Secrets for CI and local development live in a [1Password Environment](https://developer.1password.com/docs/environments/); nothing is stored as a GitHub secret except the key that unlocks it.
+Secrets for CI and local development live in a [1Password Environment](https://developer.1password.com/docs/environments/); nothing is stored as a GitHub secret except the service account token that unlocks it.
 
 ## CI
 
-Reusable workflows load the Environment with `1password/load-secrets-action@v5` (`export-env: true`) using Workload Identity (public preview, macOS and Linux runners only). Each job that loads secrets sets:
+Reusable workflows load the Environments with the composite action `.github/actions/load-op-environment`, which authenticates the 1Password CLI with a [service account](https://developer.1password.com/docs/service-accounts/) and runs `op run --environment` (macOS and Linux runners only). Every variable the Environments define is masked and exported to later steps in the job. The token itself is not exported.
 
 ```yaml
-permissions:
-  contents: read
-  id-token: write
-env:
-  OP_WORKLOAD_ID: ${{ vars.OP_WORKLOAD_ID }}
-  OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-  OP_INTEGRATION_KEY: ${{ secrets.OP_INTEGRATION_KEY }}
+- uses: willsawyerrrr/platform/.github/actions/load-op-environment@main
+  with:
+    service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+    environments: ${{ vars.OP_ENVIRONMENT_IDS }}
 ```
 
-Every variable in the Environment is exported to later steps in the job.
+`environments` is a whitespace-separated list of Environment IDs. When several Environments define the same variable, the last one listed wins.
 
 Per calling repo:
 
-- Variables `OP_WORKLOAD_ID` and `OP_ENVIRONMENT_ID`, and secret `OP_INTEGRATION_KEY`.
-- The calling workflow grants `id-token: write` (the app templates do), which the reusable workflow needs to request the OIDC token.
-- The Environment holds the variables the workflows use:
+- A service account, created at 1Password.com → Developer → Directory → Other → Create a Service Account. Choose its Environments at creation; access is read-only and cannot be changed afterwards. Use one service account per repo, scoped to that repo's Environments.
+- Secret `OP_SERVICE_ACCOUNT_TOKEN`: the service account's token.
+- Variable `OP_ENVIRONMENT_IDS`: the Environment IDs, in precedence order.
+- The Environments hold the variables the workflows use:
 
 | Workflow | Variables |
 | --- | --- |
@@ -38,5 +36,7 @@ Run commands under `op run` so the Environment's variables are set for the comma
 ```sh
 op run --environment "$OP_ENVIRONMENT_ID" -- <command>
 ```
+
+Repeat `--environment` to merge several Environments; the last wins on duplicate names.
 
 Set `OP_ENVIRONMENT_ID` in your shell. Copy the ID from the 1Password app → Developer → View Environments → Manage environment → Copy environment ID. `scripts/generate-logo` runs itself under `op run` when `RECRAFT_API_KEY` is unset and `OP_ENVIRONMENT_ID` is set.
