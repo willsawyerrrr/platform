@@ -13,13 +13,13 @@ Reusable workflows load the Environments with the composite action `.github/acti
     environments: ${{ vars.OP_ENVIRONMENT_IDS }}
 ```
 
-`environments` is a whitespace-separated list of Environment IDs. When several Environments define the same variable, the last one listed wins.
+`environments` is a whitespace-separated list of Environment IDs, e.g. a shared Environment first and the project's last (`OP_ENVIRONMENT_IDS` = `b5zkkwxuutlttwbrv5xhgojye4 3wm7pn2k5bnmyuzqznz33lufp4`). When several Environments define the same variable, the last one listed wins.
 
 Per calling repo:
 
 - A service account, created at 1Password.com → Developer → Directory → Other → Create a Service Account. Choose its Environments at creation; access is read-only and cannot be changed afterwards. Use one service account per repo, scoped to that repo's Environments.
 - Secret `OP_SERVICE_ACCOUNT_TOKEN`: the service account's token.
-- Variable `OP_ENVIRONMENT_IDS`: the Environment IDs, in precedence order.
+- Variable `OP_ENVIRONMENT_IDS`: one or more Environment IDs, in precedence order (shared first, project last), e.g. `3wm7pn2k5bnmyuzqznz33lufp4`.
 - The Environments hold the variables the workflows use:
 
 | Workflow | Variables |
@@ -37,6 +37,6 @@ Run commands under `op run` so the Environment's variables are set for the comma
 op run --environment "$OP_ENVIRONMENT_ID" -- <command>
 ```
 
-Repeat `--environment` to merge several Environments; the last wins on duplicate names.
+Repeat `--environment` to merge several Environments; the last wins on duplicate names. Platform's Environment is `3wm7pn2k5bnmyuzqznz33lufp4`.
 
 Set `OP_ENVIRONMENT_ID` in your shell. Copy the ID from the 1Password app → Developer → View Environments → Manage environment → Copy environment ID. `scripts/generate-logo` runs itself under `op run` when `RECRAFT_API_KEY` is unset and `OP_ENVIRONMENT_ID` is set.
