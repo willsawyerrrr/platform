@@ -5,7 +5,7 @@
 #
 # Writes `<dir>/<app-name>.png` (1024x1024, default `.`), or `<app-name>.svg`
 # with `--svg`. Reads `RECRAFT_API_KEY` from the environment; when unset, re-runs
-# itself under `op run` with the General Purpose 1Password Environment.
+# itself under `op run` with the Shared 1Password Environment.
 set -euo pipefail
 
 general_purpose=3i642eynjpsx2uctyqlexobgge
