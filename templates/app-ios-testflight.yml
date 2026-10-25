@@ -8,6 +8,9 @@ on:
 
 concurrency: deploy-ios
 
+permissions:
+  contents: read
+
 jobs:
   testflight:
     uses: willsawyerrrr/platform/.github/workflows/ios-testflight.yml@main

@@ -20,12 +20,8 @@ on:
         type: string
         default: ""
     secrets:
-      ASC_KEY_ID:
-        required: true
-      ASC_ISSUER_ID:
-        required: true
-      ASC_KEY_P8:
-        description: Contents of the App Store Connect API key (`.p8`).
+      OP_SERVICE_ACCOUNT_TOKEN:
+        description: Token of a service account with access to the 1Password Environments listed in the `OP_ENVIRONMENT_IDS` variable.
         required: true
 
 permissions:
@@ -42,6 +38,10 @@ jobs:
         working-directory: ${{ inputs.project-dir }}
     steps:
       - uses: actions/checkout@v7
+      - uses: willsawyerrrr/platform/.github/actions/load-op-environment@main
+        with:
+          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          environments: ${{ vars.OP_ENVIRONMENT_IDS }}
       - name: Export build environment
         env:
           BUILD_ENV: ${{ inputs.env }}
@@ -66,8 +66,6 @@ jobs:
             exit 1
           }
       - name: Write the App Store Connect API key
-        env:
-          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           mkdir -p "$RUNNER_TEMP/asc"
           printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/key.p8"
@@ -116,8 +114,6 @@ jobs:
       - name: Upload to TestFlight
         env:
           SCHEME: ${{ inputs.scheme }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           team="${DEVELOPMENT_TEAM:-}"
           if [[ -z "$team" ]]; then
@@ -150,9 +146,6 @@ jobs:
         with:
           node-version: 26
       - name: Attach the build to its App Store version
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           app="$(echo "$RUNNER_TEMP"/app.xcarchive/Products/Applications/*.app)"
           plist="$app/Info.plist"
