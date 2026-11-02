@@ -95,8 +95,14 @@ jobs:
         run: |
           projects=(*.xcodeproj)
           archive="$RUNNER_TEMP/app.xcarchive"
-          settings="$(xcodebuild -showBuildSettings -project "${projects[0]}" -alltargets -configuration Release -json)"
-          jq -c '.[].buildSettings | select(.CODE_SIGN_ENTITLEMENTS // "" != "")' <<< "$settings" | while read -r target; do
+          # Resolved per target for the iPhone SDK, so SDK-conditional entitlements
+          # (`CODE_SIGN_ENTITLEMENTS[sdk=iphone*]`) pick the iOS file; a target the
+          # iPhone SDK cannot build (macOS-only) yields nothing and is skipped.
+          xcodebuild -list -project "${projects[0]}" -json | jq -r '.project.targets[]' | while read -r name; do
+            target="$(xcodebuild -showBuildSettings -project "${projects[0]}" -target "$name" \
+              -configuration Release -sdk iphoneos -json 2>/dev/null </dev/null |
+              jq -c '.[0].buildSettings | select(.CODE_SIGN_ENTITLEMENTS // "" != "")' || true)"
+            [[ -n "$target" ]] || continue
             id="$(jq -r .PRODUCT_BUNDLE_IDENTIFIER <<< "$target")"
             src="$(jq -r '.SRCROOT + "/" + .CODE_SIGN_ENTITLEMENTS' <<< "$target")"
             team="${DEVELOPMENT_TEAM:-$(jq -r '.DEVELOPMENT_TEAM // ""' <<< "$target")}"
