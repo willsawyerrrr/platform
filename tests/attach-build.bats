@@ -112,3 +112,46 @@ attach_patch='{ "expect": "PATCH /v1/appStoreVersions/V1/relationships/build", "
   assert_failure
   assert_output --partial 'GET /v1/apps?filter%5BbundleId%5D=dev.example.app: 401'
 }
+
+@test "sets the What to Test note when none exists" {
+  echo "[$app, $valid,
+    { \"expect\": \"GET /v1/apps/A1/appStoreVersions?\", \"body\": { \"data\": [
+      { \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.2\", \"appStoreState\": \"PREPARE_FOR_SUBMISSION\" } }] } },
+    $attach_patch,
+    { \"expect\": \"GET /v1/builds/B1/betaBuildLocalizations?\", \"body\": { \"data\": [] } },
+    { \"expect\": \"POST /v1/betaBuildLocalizations\", \"status\": 201 }]" > "$FETCH_ROUTES"
+  run node "$ROOT/scripts/attach-build" "$SANDBOX/key.p8" dev.example.app 1.2 42 "PR #7: Add thing"
+  assert_success
+  assert_line 'Attached build 42 to App Store version 1.2'
+  assert_line 'Set "What to Test" for build 42'
+  run cat "$FETCH_LOG"
+  assert_line --partial 'filter%5Blocale%5D=en-US'
+  assert_line --partial 'POST /v1/betaBuildLocalizations'
+  assert_line --partial '"whatsNew":"PR #7: Add thing"'
+  assert_line --partial '"id":"B1"'
+}
+
+@test "updates the existing What to Test note" {
+  echo "[$app, $valid,
+    { \"expect\": \"GET /v1/apps/A1/appStoreVersions?\", \"body\": { \"data\": [
+      { \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.2\", \"appStoreState\": \"PREPARE_FOR_SUBMISSION\" } }] } },
+    $attach_patch,
+    { \"expect\": \"GET /v1/builds/B1/betaBuildLocalizations?\", \"body\": { \"data\": [{ \"id\": \"L1\" }] } },
+    { \"expect\": \"PATCH /v1/betaBuildLocalizations/L1\", \"status\": 204 }]" > "$FETCH_ROUTES"
+  run node "$ROOT/scripts/attach-build" "$SANDBOX/key.p8" dev.example.app 1.2 42 "PR #7: Add thing"
+  assert_success
+  assert_line 'Set "What to Test" for build 42'
+  run cat "$FETCH_LOG"
+  assert_line --partial 'PATCH /v1/betaBuildLocalizations/L1'
+  assert_line --partial '"whatsNew":"PR #7: Add thing"'
+}
+
+@test "skips the What to Test note when none is given" {
+  echo "[$app, $valid,
+    { \"expect\": \"GET /v1/apps/A1/appStoreVersions?\", \"body\": { \"data\": [
+      { \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.2\", \"appStoreState\": \"PREPARE_FOR_SUBMISSION\" } }] } },
+    $attach_patch]" > "$FETCH_ROUTES"
+  attach
+  assert_success
+  refute_line --partial 'What to Test'
+}
