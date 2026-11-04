@@ -37,10 +37,18 @@ Platform's own workflows load no Environment.
 
 ## Local development
 
-Run commands under `op run` so the Environments' variables are set for the command only:
+Local secrets come from 1Password Environments mounted as `.env` files:
+
+| Environment       | File                                 |
+| ----------------- | ------------------------------------ |
+| Shared            | `~/willsawyerrrr.dev/.env`           |
+| Apple Development | `~/willsawyerrrr.dev/.env.apple`     |
+| A project         | `~/willsawyerrrr.dev/<project>/.env` |
+
+Source the files a command needs, shared first and the project last; the last wins on duplicate names:
 
 ```sh
-op run --environment <environment-id> -- <command>
+set -a; . ~/willsawyerrrr.dev/.env; . ~/willsawyerrrr.dev/<project>/.env; set +a
 ```
 
-Repeat `--environment` to merge several Environments; the last wins on duplicate names. Copy an ID from the 1Password app → Developer → View Environments → Manage environment → Copy environment ID. `scripts/generate-logo` runs itself under `op run` with Shared (`3i642eynjpsx2uctyqlexobgge`) when `RECRAFT_API_KEY` is unset and the 1Password CLI is installed.
+`scripts/generate-logo` runs itself under `op run` with Shared (`3i642eynjpsx2uctyqlexobgge`) when `RECRAFT_API_KEY` is unset and the 1Password CLI is installed. Copy an Environment ID from the 1Password app → Developer → View Environments → Manage environment → Copy environment ID.
