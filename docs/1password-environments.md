@@ -45,10 +45,12 @@ Local secrets come from 1Password Environments mounted as `.env` files:
 | Apple Development | `~/willsawyerrrr.dev/.env.apple`     |
 | A project         | `~/willsawyerrrr.dev/<project>/.env` |
 
-Source the files a command needs, shared first and the project last; the last wins on duplicate names:
+Run a command with `scripts/load-env`, listing the files it needs, shared first and the project last; the last wins on duplicate names:
 
 ```sh
-set -a; . ~/willsawyerrrr.dev/.env; . ~/willsawyerrrr.dev/<project>/.env; set +a
+scripts/load-env ~/willsawyerrrr.dev/.env ~/willsawyerrrr.dev/<project>/.env -- <command>
 ```
+
+`load-env` reads each file with `cat`, so it works from `sh` (which `pnpm` runs scripts with) and accepts unquoted multi-line PEM values. Sourcing a mounted file with `.` loads nothing under `sh`, and runs the lines of a PEM value as commands under `bash` and `zsh`. To load into the current shell, run `eval "$(scripts/load-env --print <file>...)"`. Other projects call it by its path, `~/willsawyerrrr.dev/platform/main/scripts/load-env`.
 
 `scripts/generate-logo` runs itself under `op run` with Shared (`3i642eynjpsx2uctyqlexobgge`) when `RECRAFT_API_KEY` is unset and the 1Password CLI is installed. Copy an Environment ID from the 1Password app → Developer → View Environments → Manage environment → Copy environment ID.
