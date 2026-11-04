@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Run a command with the variables from mounted 1Password Environment `.env`
+# files.
+#
+# Usage: load-env <file>... -- <command> [args...]
+#        eval "$(load-env --print <file>...)"
+#
+# Files load in order, so a later file wins on a clash. Reads each file with
+# `cat` (sourcing a mounted file with `.` loads nothing under `sh`) and accepts
+# unquoted multi-line PEM values (`-----BEGIN ...` to `-----END ...`) as well as
+# single- and multi-line quoted values. With `--print`, writes `export`
+# statements instead of running a command.
+set -euo pipefail
+
+usage() { echo "usage: load-env <file>... -- <command> [args...] | load-env --print <file>..." >&2; exit 1; }
+
+print_exports() {
+  awk -v q="'" '
+    function emit(name, val,    out, i) {
+      out = ""
+      while ((i = index(val, q)) > 0) {
+        out = out substr(val, 1, i - 1) q "\\" q q
+        val = substr(val, i + 1)
+      }
+      printf "export %s=%s%s%s\n", name, q, out val, q
+    }
+    { sub(/\r$/, "") }
+    pending != "" {
+      val = val "\n" $0
+      if (index($0, closer)) {
+        if (quote != "") { sub(closer "[^\n]*$", "", val) }
+        emit(pending, val); pending = ""
+      }
+      next
+    }
+    /^[ \t]*(#|$)/ { next }
+    {
+      line = $0
+      sub(/^[ \t]*export[ \t]+/, "", line)
+      eq = index(line, "=")
+      if (eq < 2) next
+      name = substr(line, 1, eq - 1)
+      if (name !~ /^[A-Za-z_][A-Za-z0-9_]*$/) next
+      val = substr(line, eq + 1)
+      first = substr(val, 1, 1)
+      quote = ""
+      if (first == "\"" || first == q) {
+        quote = first
+        rest = substr(val, 2)
+        end = index(rest, quote)
+        if (end) { emit(name, substr(rest, 1, end - 1)); next }
+        pending = name; closer = quote; val = rest; next
+      }
+      if (val ~ /^-----BEGIN / && val !~ /-----END /) {
+        pending = name; closer = "-----END "; val = val; next
+      }
+      emit(name, val)
+    }
+  ' "$1"
+}
+
+print_mode=0
+if [[ "${1:-}" == --print ]]; then print_mode=1; shift; fi
+
+files=()
+while [[ $# -gt 0 && "$1" != -- ]]; do files+=("$1"); shift; done
+[[ ${#files[@]} -gt 0 ]] || usage
+
+if [[ $print_mode -eq 0 ]]; then
+  [[ "${1:-}" == -- ]] || usage
+  shift
+  [[ $# -gt 0 ]] || usage
+fi
+
+exports=""
+for f in "${files[@]}"; do
+  content=$(cat "$f") || { echo "load-env: cannot read $f" >&2; exit 1; }
+  exports+=$(print_exports <(printf '%s\n' "$content"))$'\n'
+done
+
+if [[ $print_mode -eq 1 ]]; then
+  printf '%s' "$exports"
+  exit 0
+fi
+
+eval "$exports"
+exec "$@"
