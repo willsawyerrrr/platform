@@ -3,18 +3,21 @@
 // the version if none exists, via the App Store Connect API. An app has one
 // editable version at a time, so an editable version with another number is
 // renamed to the build's. A version that exists but is no longer editable
-// (e.g. in review) is left as it is.
+// (e.g. in review) is left as it is. Given a "what to test" note, also sets
+// it as the build's `en-US` TestFlight beta build localization.
 //
-// Usage: attach-build <key.p8> <bundle-id> <version> <build-number>
+// Usage: attach-build <key.p8> <bundle-id> <version> <build-number> [whats-new]
 //
 // Reads `ASC_KEY_ID` and `ASC_ISSUER_ID` from the environment.
 import { createPrivateKey, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-const [keyPath, bundleId, version, buildNumber] = process.argv.slice(2);
+const [keyPath, bundleId, version, buildNumber, whatsNew] = process.argv.slice(2);
 const { ASC_KEY_ID, ASC_ISSUER_ID } = process.env;
 if (!keyPath || !bundleId || !version || !buildNumber || !ASC_KEY_ID || !ASC_ISSUER_ID) {
-  console.error("usage: attach-build <key.p8> <bundle-id> <version> <build-number> (needs ASC_KEY_ID, ASC_ISSUER_ID)");
+  console.error(
+    "usage: attach-build <key.p8> <bundle-id> <version> <build-number> [whats-new] (needs ASC_KEY_ID, ASC_ISSUER_ID)",
+  );
   process.exit(1);
 }
 
@@ -104,3 +107,26 @@ await api("PATCH", `/v1/appStoreVersions/${appStoreVersion.id}/relationships/bui
   data: { type: "builds", id: build.id },
 });
 console.log(`Attached build ${buildNumber} to App Store version ${version}`);
+
+if (whatsNew) {
+  const locale = "en-US";
+  const localizations = await api(
+    "GET",
+    `/v1/builds/${build.id}/betaBuildLocalizations?${query({ "filter[locale]": locale })}`,
+  );
+  const localization = localizations.data[0];
+  if (localization) {
+    await api("PATCH", `/v1/betaBuildLocalizations/${localization.id}`, {
+      data: { type: "betaBuildLocalizations", id: localization.id, attributes: { whatsNew } },
+    });
+  } else {
+    await api("POST", "/v1/betaBuildLocalizations", {
+      data: {
+        type: "betaBuildLocalizations",
+        attributes: { locale, whatsNew },
+        relationships: { build: { data: { type: "builds", id: build.id } } },
+      },
+    });
+  }
+  console.log(`Set "What to Test" for build ${buildNumber}`);
+}

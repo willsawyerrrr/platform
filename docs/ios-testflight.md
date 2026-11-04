@@ -24,4 +24,6 @@ The app record must exist in App Store Connect.
 
 After the upload, `scripts/attach-build` waits for App Store Connect to process the build, then attaches it to the app's editable App Store version for the marketing version, renaming the editable version if it has another number, or creating the version if none exists; a version that is already in review or released is left as it is. The listing shows a placeholder icon until a build is attached, so this gives it the build's icon. The version is not submitted for review.
 
+It also sets the build's TestFlight "What to Test" note (`en-US`) to the triggering commit's subject, which for a squash-merged PR ends in `(#123)`, so a build can be traced back to the PR that produced it.
+
 The build number is the run number, so every upload is unique. The marketing version comes from the project and must match `marketing-version`.
