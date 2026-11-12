@@ -125,7 +125,7 @@ attach_patch='{ "expect": "PATCH /v1/appStoreVersions/V1/relationships/build", "
   assert_line 'Attached build 42 to App Store version 1.2'
   assert_line 'Set "What to Test" for build 42'
   run cat "$FETCH_LOG"
-  assert_line --partial 'filter%5Blocale%5D=en-US'
+  refute_line --partial 'filter%5Blocale%5D'
   assert_line --partial 'POST /v1/betaBuildLocalizations'
   assert_line --partial '"whatsNew":"PR #7: Add thing"'
   assert_line --partial '"id":"B1"'
@@ -136,7 +136,9 @@ attach_patch='{ "expect": "PATCH /v1/appStoreVersions/V1/relationships/build", "
     { \"expect\": \"GET /v1/apps/A1/appStoreVersions?\", \"body\": { \"data\": [
       { \"id\": \"V1\", \"attributes\": { \"versionString\": \"1.2\", \"appStoreState\": \"PREPARE_FOR_SUBMISSION\" } }] } },
     $attach_patch,
-    { \"expect\": \"GET /v1/builds/B1/betaBuildLocalizations?\", \"body\": { \"data\": [{ \"id\": \"L1\" }] } },
+    { \"expect\": \"GET /v1/builds/B1/betaBuildLocalizations?\", \"body\": { \"data\": [
+      { \"id\": \"L0\", \"attributes\": { \"locale\": \"fr-FR\" } },
+      { \"id\": \"L1\", \"attributes\": { \"locale\": \"en-US\" } }] } },
     { \"expect\": \"PATCH /v1/betaBuildLocalizations/L1\", \"status\": 204 }]" > "$FETCH_ROUTES"
   run node "$ROOT/scripts/attach-build" "$SANDBOX/key.p8" dev.example.app 1.2 42 "PR #7: Add thing"
   assert_success
