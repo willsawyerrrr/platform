@@ -110,11 +110,8 @@ console.log(`Attached build ${buildNumber} to App Store version ${version}`);
 
 if (whatsNew) {
   const locale = "en-US";
-  const localizations = await api(
-    "GET",
-    `/v1/builds/${build.id}/betaBuildLocalizations?${query({ "filter[locale]": locale })}`,
-  );
-  const localization = localizations.data[0];
+  const localizations = await api("GET", `/v1/builds/${build.id}/betaBuildLocalizations?${query({ limit: "200" })}`);
+  const localization = localizations.data.find((l) => l.attributes?.locale === locale);
   if (localization) {
     await api("PATCH", `/v1/betaBuildLocalizations/${localization.id}`, {
       data: { type: "betaBuildLocalizations", id: localization.id, attributes: { whatsNew } },
