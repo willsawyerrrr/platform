@@ -3,7 +3,7 @@
 Shared reusable workflows, scripts and templates for willsawyerrrr.dev projects. See the parent `CLAUDE.md` for workflow conventions.
 
 - Changes to a reusable workflow affect every app that calls it at `@main`; keep inputs backwards compatible.
-- iOS and macOS jobs pin `macos-26` and Xcode 26.6 (`DEVELOPER_DIR`), the newest GA Xcode on GitHub's runners; never `macos-latest`.
+- iOS and macOS jobs pin the `xcode-27` runner and Xcode 27.2 (`DEVELOPER_DIR`), the newest GA Xcode on GitHub's runners; never `macos-latest`.
 - `scripts/attach-build` runs on Node 26 in CI (`setup-node` in `ios-testflight.yml`) and locally (`.nvmrc`).
 - `ios-testflight.yml` fails before archiving unless `MARKETING_VERSION` equals its `marketing-version` input (default `0.1.0`).
 - Keep `docs/` in sync with workflows, scripts and templates.
