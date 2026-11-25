@@ -1,0 +1,26 @@
+name: Cache Xcode builds
+description: >-
+  Restores and saves DerivedData, including resolved Swift packages (`SourcePackages`) and their build
+  products, keyed on the selected Xcode's build version and the hash of every `project.yml`,
+  `Package.swift` and `Package.resolved`.
+
+inputs:
+  key:
+    description: Distinguishes jobs that build different schemes or destinations, so each keeps its own cache.
+    default: ${{ github.job }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read the Xcode build version
+      id: xcode
+      shell: bash
+      run: echo "build=$(xcodebuild -version | awk '/^Build version/ { print $3 }')" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v6
+      with:
+        path: |
+          ~/Library/Developer/Xcode/DerivedData
+          !~/Library/Developer/Xcode/DerivedData/*/Index.noindex
+          !~/Library/Developer/Xcode/DerivedData/*/Logs
+        key: xcode-${{ steps.xcode.outputs.build }}-${{ inputs.key }}-${{ hashFiles('**/project.yml', '**/Package.swift', '**/Package.resolved') }}
+        restore-keys: xcode-${{ steps.xcode.outputs.build }}-${{ inputs.key }}-

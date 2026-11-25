@@ -26,4 +26,6 @@ After the upload, `scripts/attach-build` waits for App Store Connect to process 
 
 It also sets the build's TestFlight "What to Test" note (`en-US`) to the triggering commit's subject, which for a squash-merged PR ends in `(#123)`, so a build can be traced back to the PR that produced it.
 
+Swift packages and build products are cached across runs with the [Xcode build cache](xcode-cache.md).
+
 The build number is the run number, so every upload is unique. The marketing version comes from the project and must match `marketing-version`.
