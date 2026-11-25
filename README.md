@@ -7,6 +7,7 @@ Engineering platform shared by all willsawyerrrr.dev projects.
 - [iOS TestFlight deploy](docs/ios-testflight.md): ship an app to TestFlight from GitHub Actions.
 - [Generate app logos](docs/generate-logo.md): create a logo with Recraft.
 - [1Password Environments](docs/1password-environments.md): load CI and local secrets from 1Password.
+- [Xcode build cache](docs/xcode-cache.md): reuse Swift packages and build products across Xcode jobs.
 
 ## Reusable workflows
 

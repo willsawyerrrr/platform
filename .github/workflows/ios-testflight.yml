@@ -38,6 +38,7 @@ jobs:
         working-directory: ${{ inputs.project-dir }}
     steps:
       - uses: actions/checkout@v7
+      - uses: willsawyerrrr/platform/.github/actions/xcode-cache@main
       - uses: willsawyerrrr/platform/.github/actions/load-op-environment@main
         with:
           service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}

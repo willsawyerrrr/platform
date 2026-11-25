@@ -5,6 +5,7 @@ Shared reusable workflows, scripts and templates for willsawyerrrr.dev projects.
 - Changes to a reusable workflow affect every app that calls it at `@main`; keep inputs backwards compatible.
 - iOS and macOS jobs pin the `xcode-27` runner and Xcode 27.2 (`DEVELOPER_DIR`), the newest GA Xcode on GitHub's runners; never `macos-latest`.
 - `scripts/attach-build` runs on Node 26 in CI (`setup-node` in `ios-testflight.yml`) and locally (`.nvmrc`).
+- Every Xcode job, here and in apps' CI, runs `.github/actions/xcode-cache` before its first `xcodebuild`. Keep `docs/xcode-cache.md` in sync.
 - `ios-testflight.yml` fails before archiving unless `MARKETING_VERSION` equals its `marketing-version` input (default `0.1.0`).
 - Keep `docs/` in sync with workflows, scripts and templates.
 - Secrets come from shared 1Password Environments (Apple Development, Shared), never `secrets.*`/`vars.*` beyond `secrets.OP_SERVICE_ACCOUNT_TOKEN` and `vars.OP_ENVIRONMENT_IDS`: workflows load them with `.github/actions/load-op-environment` and local development runs commands under `scripts/load-env` with the mounted `.env` files (see the doc). Keep `docs/1password-environments.md` in sync.
