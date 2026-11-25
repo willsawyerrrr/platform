@@ -53,15 +53,18 @@ jobs:
             brew install xcodegen
             xcodegen generate
           fi
-      - name: Check the marketing version
+      - name: Read the build settings
         env:
           SCHEME: ${{ inputs.scheme }}
           EXPECTED: ${{ inputs.marketing-version }}
         run: |
           projects=(*.xcodeproj)
           [[ ${#projects[@]} -eq 1 ]] || { echo "Expected exactly one .xcodeproj" >&2; exit 1; }
-          actual=$(xcodebuild -showBuildSettings -project "${projects[0]}" -scheme "$SCHEME" -configuration Release |
-            awk '$1 == "MARKETING_VERSION" { print $3; exit }')
+          # Resolved once per run for the iPhone SDK, so SDK-conditional settings
+          # (`CODE_SIGN_ENTITLEMENTS[sdk=iphone*]`) pick the iOS value.
+          xcodebuild -showBuildSettings -project "${projects[0]}" -scheme "$SCHEME" \
+            -configuration Release -sdk iphoneos -json > "$RUNNER_TEMP/build-settings.json"
+          actual=$(jq -r '[.[].buildSettings.MARKETING_VERSION // empty][0] // ""' "$RUNNER_TEMP/build-settings.json")
           [[ "$actual" == "$EXPECTED" ]] || {
             echo "::error::MARKETING_VERSION is '$actual' but must be '$EXPECTED'" >&2
             exit 1
@@ -94,40 +97,27 @@ jobs:
             -quiet
       - name: Embed entitlements
         run: |
-          projects=(*.xcodeproj)
           archive="$RUNNER_TEMP/app.xcarchive"
-          # Resolved per target for the iPhone SDK, so SDK-conditional entitlements
-          # (`CODE_SIGN_ENTITLEMENTS[sdk=iphone*]`) pick the iOS file; a target the
-          # iPhone SDK cannot build (macOS-only) yields nothing and is skipped.
-          xcodebuild -list -project "${projects[0]}" -json | jq -r '.project.targets[]' | while read -r name; do
-            target="$(xcodebuild -showBuildSettings -project "${projects[0]}" -target "$name" \
-              -configuration Release -sdk iphoneos -json 2>/dev/null </dev/null |
-              jq -c '.[0].buildSettings | select(.CODE_SIGN_ENTITLEMENTS // "" != "")' || true)"
-            [[ -n "$target" ]] || continue
-            id="$(jq -r .PRODUCT_BUNDLE_IDENTIFIER <<< "$target")"
-            src="$(jq -r '.SRCROOT + "/" + .CODE_SIGN_ENTITLEMENTS' <<< "$target")"
-            team="${DEVELOPMENT_TEAM:-$(jq -r '.DEVELOPMENT_TEAM // ""' <<< "$target")}"
-            [[ -f "$src" ]] || continue
-            expanded="$RUNNER_TEMP/$id.entitlements"
-            sed -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/$id/g" \
-              -e "s/\$(AppIdentifierPrefix)/$team./g" -e "s/\$(TeamIdentifierPrefix)/$team./g" "$src" > "$expanded"
-            find "$archive/Products/Applications" \( -name '*.app' -o -name '*.appex' \) -print0 |
-              while IFS= read -r -d '' bundle; do
-                if [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$bundle/Info.plist")" == "$id" ]]; then
-                  codesign --force --sign - --entitlements "$expanded" "$bundle"
-                fi
-              done
-          done
+          # A target without entitlements (or one the iPhone SDK cannot build) is skipped.
+          jq -c '.[].buildSettings | select(.CODE_SIGN_ENTITLEMENTS // "" != "")' "$RUNNER_TEMP/build-settings.json" |
+            while read -r target; do
+              id="$(jq -r .PRODUCT_BUNDLE_IDENTIFIER <<< "$target")"
+              src="$(jq -r '.SRCROOT + "/" + .CODE_SIGN_ENTITLEMENTS' <<< "$target")"
+              team="${DEVELOPMENT_TEAM:-$(jq -r '.DEVELOPMENT_TEAM // ""' <<< "$target")}"
+              [[ -f "$src" ]] || continue
+              expanded="$RUNNER_TEMP/$id.entitlements"
+              sed -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/$id/g" \
+                -e "s/\$(AppIdentifierPrefix)/$team./g" -e "s/\$(TeamIdentifierPrefix)/$team./g" "$src" > "$expanded"
+              find "$archive/Products/Applications" \( -name '*.app' -o -name '*.appex' \) -print0 |
+                while IFS= read -r -d '' bundle; do
+                  if [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$bundle/Info.plist")" == "$id" ]]; then
+                    codesign --force --sign - --entitlements "$expanded" "$bundle"
+                  fi
+                done
+            done
       - name: Upload to TestFlight
-        env:
-          SCHEME: ${{ inputs.scheme }}
         run: |
-          team="${DEVELOPMENT_TEAM:-}"
-          if [[ -z "$team" ]]; then
-            projects=(*.xcodeproj)
-            team=$(xcodebuild -showBuildSettings -project "${projects[0]}" -scheme "$SCHEME" -configuration Release |
-              awk '$1 == "DEVELOPMENT_TEAM" { print $3; exit }')
-          fi
+          team="${DEVELOPMENT_TEAM:-$(jq -r '[.[].buildSettings.DEVELOPMENT_TEAM // empty][0] // ""' "$RUNNER_TEMP/build-settings.json")}"
           [[ -n "$team" ]] || { echo "No development team: set DEVELOPMENT_TEAM in the project or the env input" >&2; exit 1; }
           team_key="<key>teamID</key><string>$team</string>"
           cat > "$RUNNER_TEMP/export.plist" <<P
