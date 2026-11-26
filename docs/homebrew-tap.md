@@ -13,7 +13,7 @@ Apps are published to [`willsawyerrrr/homebrew-tap`](https://github.com/willsawy
 ### Add a cask app
 
 1. `scripts/add-app --cask <app-repo> "<description>"` scaffolds `Casks/<app>.rb` in the tap (and a row in the tap's README table) and a cask `.github/workflows/release.yml` in the app. The bundle is `<App>.app` in `<App>.zip`, where `<App>` is the repo name in PascalCase; override with `APP_BUNDLE`.
-2. Replace the workflow's `build-command` with the app's packaging command (it must produce `<App>.zip` at the repo root) and adjust the cask's `zap` stanza and `depends_on macos:`. Add `binary` stanzas if the app ships a CLI.
+2. Replace the workflow's `build-command` with the app's packaging command (it must produce `<App>.zip` at the repo root) and adjust the cask's `zap` stanza. Add `binary` stanzas if the app ships a CLI.
 3. No release is needed first: the cask starts at the latest release if it has the zip, else at `0.0.0` with a zero checksum that the first release replaces.
 4. Set up the app repo's Environments as above; for signing, add Apple Development (`b5zkkwxuutlttwbrv5xhgojye4`) to `OP_ENVIRONMENT_IDS` (see Casks).
 5. Run `brew style --fix` and `brew audit --cask --online <app>` in the tap, then commit and push the cask (tap) and workflow (app). The online audit needs the first release's zip, so it only passes once that release exists; the tap's CI runs the same checks.
@@ -35,5 +35,6 @@ An app can ship as a cask from a prebuilt macOS zip. Set `cask` (the token in `C
 - `build-command` must produce `asset`, e.g. with `ditto -c -k --keepParent`.
 - Signing: with `DEVELOPER_ID_P12` (base64 `.p12`) and `DEVELOPER_ID_P12_PASSWORD`, the job imports the certificate into a temporary keychain and sets `SIGNING_IDENTITY` (`Developer ID Application: …`) for `build-command`. With `NOTARY_KEY` (base64 App Store Connect `.p8`), `NOTARY_KEY_ID` and `NOTARY_ISSUER_ID`, it also sets `NOTARY_KEY_PATH`, `NOTARY_KEY_ID` and `NOTARY_ISSUER_ID`, e.g. for `xcrun notarytool submit --key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID"`. The keychain and key are deleted after the job. Without these variables in the Environment nothing is set, and `build-command` should sign ad hoc.
 - `homebrew.yml` sets `version` and `sha256` in `Casks/<cask>.rb` (the asset's checksum) and commits `feat: Update <cask> to <tag>`. The cask's `url` must use `#{version}`.
+- New casks require macOS 27 (`depends_on macos: :golden_gate`). The tap's audit requires the cask's `depends_on macos:` to match the app's minimum macOS, and release workflows don't update it: change both together.
 
 Apps call them via `uses: willsawyerrrr/platform/.github/workflows/release.yml@main`. This repo must stay public for other repos to call its workflows.

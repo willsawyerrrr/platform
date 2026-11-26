@@ -7,7 +7,7 @@ cask "@NAME@" do
   desc "@DESC@"
   homepage "https://github.com/@REPO@"
 
-  depends_on macos: :ventura
+  depends_on macos: :golden_gate
 
   app "@APP@.app"
 

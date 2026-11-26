@@ -67,6 +67,7 @@ setup() {
   assert_line "  sha256 \"$sha\""
   assert_line '  url "https://github.com/willsawyerrrr/my-app/releases/download/v#{version}/MyApp.zip"'
   assert_line '  desc "Does things"'
+  assert_line '  depends_on macos: :golden_gate'
   assert_line '  app "MyApp.app"'
   run cat "$APP_DIR/.github/workflows/release.yml"
   assert_line '      cask: my-app'
